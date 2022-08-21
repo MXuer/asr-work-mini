@@ -305,7 +305,7 @@ class PlayThread(QThread):
 
 
 class ReadTextFileThread(QThread):
-    audio_info = pyqtSignal(dict)
+    audio_info = pyqtSignal(list)
     def __init__(self, text_file):
         super(ReadTextFileThread, self).__init__()
         self.text_file = text_file
