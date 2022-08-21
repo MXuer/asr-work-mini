@@ -338,52 +338,6 @@ class FindAudioThread(QThread):
         self.audio_info.emit(audio2path)
 
 
-class RecThread(QThread):
-    current_index = pyqtSignal(int)
-    done_signal = pyqtSignal()
-    info = pyqtSignal(str)
-    def __init__(self, model_path, wav_path, topk):
-        super(RecThread, self).__init__()
-        self.model_path = model_path
-        self.wav_path = wav_path
-        self.topk = topk
-        self.labels = np.array(['air_conditioner', 'car_horn', 'children_playing', 'dog_bark',
-       'drilling', 'engine_idling', 'gun_shot', 'jackhammer', 'siren',
-       'street_music'])
-
-    def run(self):
-        wavname = os.path.basename(self.wav_path)
-        feat = self.ExtractMelFeatures()
-        feat = self.preprocess(feat)
-        feat = np.expand_dims(feat.T, 0)
-        self.model = keras.models.load_model(self.model_path, compile=False)
-        max_index = self.model.predict_classes(feat)
-        predict_probs = self.model.predict(feat)
-        self.info.emit("-"*20)
-        self.info.emit(f"正在识别 [{wavname}]...")
-        if self.topk:
-            b = tf.nn.top_k(predict_probs, 5)
-            scores, indexs = b
-            scores, indexs = scores.numpy()[0], indexs.numpy()[0]
-            for ii in range(5):
-                self.info.emit(f"[ {ii+1} ] : {self.labels[indexs[ii]]} {round(scores[ii], 3)}")
-        else:
-            max_value = max(predict_probs[0])
-            self.info.emit(f"[ 1 ] : {self.labels[max_index][0]} {round(max_value, 3)}")
-
-        self.done_signal.emit()
-
-
-    def ExtractMelFeatures(self):
-            X, sample_rate = librosa.load(self.wav_path, sr=44100, res_type='kaiser_fast')
-            return librosa.feature.melspectrogram( X, 44100, n_fft=1024, hop_length=1024, n_mels=128, power=1 )
-
-    def preprocess(self, item):
-        mean = np.mean(item)
-        std = np.std(item)
-        return (item - mean) / std
-
-
 if __name__=="__main__":
     app = QApplication(sys.argv)
     w = QuitApplication()
