@@ -11,6 +11,7 @@ import librosa
 from pathlib import Path
 import time
 from collections import defaultdict
+from datetime import datetime
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
                              QVBoxLayout, QLineEdit, QSpacerItem, QLabel, QTextEdit,
@@ -18,18 +19,15 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPalette, QPixmap, QBrush
-import tensorflow.keras as keras
 from playsound import playsound
-from pydub import AudioSegment
 import time
 import numpy as np
-from sklearn.preprocessing import LabelEncoder
-import tensorflow as tf
 import scipy.io.wavfile as wav
 import matplotlib.pyplot as plt
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib
+import sqlite3
 matplotlib.use('Qt5Agg')
 
 class QuitApplication(QMainWindow):
@@ -93,22 +91,16 @@ class QuitApplication(QMainWindow):
         self.btn_audio = QPushButton("输入音频文件夹: ")
         self.le_audio = QLineEdit()
 
-        self.btn_play = QPushButton()
-        self.btn_play.setIcon(QIcon('icon\\play.png'))
+        self.lbl_progress = QLabel()
 
         self.btn_audio.clicked.connect(self.onClickAudioDir)
         self.btn_audio.setFont(font_btn)
-        self.le_audio.setText(r"E:\audioClass\UIforAudio\usc") # self.cwd
+        self.le_audio.setText(self.cwd) #
         self.le_audio.setFont(font_le)
-        self.btn_play.clicked.connect(self.onClickPlay)
-        self.btn_play.setFont(font_btn)
 
-        # self.AudioHLayout.addItem(sp_readpath_left)
         self.AudioHLayout.addWidget(self.btn_audio)
-        # self.AudioHLayout.addItem(sp_readpath_mid)
         self.AudioHLayout.addWidget(self.le_audio)
-        self.AudioHLayout.addWidget(self.btn_play)
-        # self.AudioHLayout.addItem(sp_readpath_right)
+        self.AudioHLayout.addWidget(self.lbl_progress)
 
 
         ## 原始结果的布局
@@ -191,6 +183,31 @@ class QuitApplication(QMainWindow):
         mainFrame.setLayout(self.globalVLayout)
         self.setCentralWidget(mainFrame)
 
+        self.db_path = "database/annotation.db"
+        self.conn = None
+        self.cur = None
+
+        if not os.path.exists(self.db_path):
+            self.createDB()
+        else:
+            self.loadExistedData()
+
+    def createDB(self):
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.conn = sqlite3.connect(self.db_path)
+        self.cur = self.conn.cursor()
+        # 建立一个表
+        information = '''CREATE TABLE annotation
+        (audio_name TEXT,
+         audio_path TEXT,
+         is_accept TEXT,
+         time TEXT,
+         notation TEXT,
+         AsrCERENCE TEXT,
+         Label TEXT
+        )
+        '''
+        self.cur.execute(information)
 
     def plot_(self, audio_path):
         plt.cla()
@@ -212,6 +229,14 @@ class QuitApplication(QMainWindow):
 
         return text_file
 
+    def loadExistedData(self):
+        self.conn = sqlite3.connect(self.db_path)
+        self.cur = self.conn.cursor()
+
+
+    def exportDB(self):
+        ## 点击导出按钮的时候导出这个结果
+        pass
 
     def getText(self, audio2text):
         self.audio2text = audio2text
@@ -219,6 +244,7 @@ class QuitApplication(QMainWindow):
         self.le_rec.setText(self.audio2text[0][1])
         self.le_ref.setText(self.audio2text[0][2])
         self.audio_index += 1
+        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
 
 
     def onClickAudioDir(self):
@@ -234,7 +260,6 @@ class QuitApplication(QMainWindow):
 
     def getWavFiles(self, audio2path):
         self.audio2path = audio2path
-        self.audio_name = "1b_10036.wav"
         if self.audio_name:
             audio_path = self.audio2path[self.audio_name]
             self.plot_(audio_path)
@@ -244,31 +269,49 @@ class QuitApplication(QMainWindow):
 
 
     def onClickClear(self):
-        self.te_content.clear()
-
-    def onClickStart(self):
-        wav_path = self.le_audio.text()
-        if not os.path.exists(wav_path):
-            QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
-            self.setEnableTrue()
+        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
+        if self.audio_index == len(self.audio2text):
             return
-
+        rec_text = self.le_rec.text()
+        ref_text = self.le_ref.text()
+        now = datetime.now()
+        now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
+        anno_result = f"""INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
+        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'N', now_str, '', rec_text, ref_text)
+        self.cur.execute(anno_result, value)
+        self.conn.commit()
         self.audio_name = self.audio2text[self.audio_index][0]
         self.le_rec.setText(self.audio2text[self.audio_index][1])
         self.le_ref.setText(self.audio2text[self.audio_index][2])
 
-        test_audios = ["1b_10037.wav", "1b_10036.wav"]
-        self.audio_name = test_audios[self.audio_index % 2]
         audio_path = self.audio2path[self.audio_name]
         self.plot_(audio_path)
         self.play_thread = PlayThread(audio_path)
         self.play_thread.start()
-
         self.audio_index += 1
 
+    def onClickStart(self):
+        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
+        if self.audio_index == len(self.audio2text):
+            return
+        rec_text = self.le_rec.text()
+        ref_text = self.le_ref.text()
+        now = datetime.now()
+        now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
+        anno_result = f"""INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
+        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text, ref_text)
+        print(anno_result)
+        self.cur.execute(anno_result, value)
+        self.conn.commit()
+        self.audio_name = self.audio2text[self.audio_index][0]
+        self.le_rec.setText(self.audio2text[self.audio_index][1])
+        self.le_ref.setText(self.audio2text[self.audio_index][2])
 
-
-
+        audio_path = self.audio2path[self.audio_name]
+        self.plot_(audio_path)
+        self.play_thread = PlayThread(audio_path)
+        self.play_thread.start()
+        self.audio_index += 1
 
 
     def onClickPlay(self):
