@@ -74,7 +74,6 @@ class QuitApplication(QMainWindow):
 
         self.btn_text.clicked.connect(self.onClickChooseTextFile)
         self.btn_text.setFont(font_btn)
-        self.le_textfile.setText(self.cwd)#
         self.le_textfile.setFont(font_le)
 
         # self.inputHLayout.addItem(sp_readpath_left)
@@ -95,7 +94,6 @@ class QuitApplication(QMainWindow):
 
         self.btn_audio.clicked.connect(self.onClickAudioDir)
         self.btn_audio.setFont(font_btn)
-        self.le_audio.setText(self.cwd) #
         self.le_audio.setFont(font_le)
 
         self.AudioHLayout.addWidget(self.btn_audio)
@@ -173,7 +171,6 @@ class QuitApplication(QMainWindow):
         self.globalVLayout.addLayout(self.contentHLayout)
         self.globalVLayout.addLayout(self.RunHLayout)
 
-
         self.audio2text = None
         self.audio2path = None
         self.audio_name = None
@@ -230,9 +227,17 @@ class QuitApplication(QMainWindow):
         return text_file
 
     def loadExistedData(self):
+        ## 加载已经存在的db文件
         self.conn = sqlite3.connect(self.db_path)
         self.cur = self.conn.cursor()
 
+    def lastOne(self):
+        ## 回退到上一条
+        pass
+
+    def selectByIndex(self, index):
+        ## 显示某一条的标注结果
+        pass
 
     def exportDB(self):
         ## 点击导出按钮的时候导出这个结果
@@ -269,6 +274,14 @@ class QuitApplication(QMainWindow):
 
 
     def onClickClear(self):
+        wav_dir = self.le_audio.text()
+        if not os.path.exists(wav_dir):
+            QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
+            return
+        textfile = self.le_textfile.text()
+        if not os.path.exists(textfile):
+            QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
+            return
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
             return
@@ -291,6 +304,15 @@ class QuitApplication(QMainWindow):
         self.audio_index += 1
 
     def onClickStart(self):
+        wav_dir = self.le_audio.text()
+        print(wav_dir)
+        if not os.path.exists(wav_dir):
+            QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
+            return
+        textfile = self.le_textfile.text()
+        if not os.path.exists(textfile):
+            QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
+            return
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
             return
