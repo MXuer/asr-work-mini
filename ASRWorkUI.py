@@ -13,7 +13,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 
-from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
+from PyQt6.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
                              QVBoxLayout, QLineEdit, QSpacerItem, QLabel, QTextEdit,
                              QComboBox, QSizePolicy, QFileDialog, QMessageBox, QCheckBox, QLabel)
 
@@ -25,7 +25,7 @@ import numpy as np
 import scipy.io.wavfile as wav
 import matplotlib.pyplot as plt
 
-#from qt_material import apply_stylesheet
+from qt_material import apply_stylesheet
 
 import qdarkstyle
 from qdarkstyle.light.palette import LightPalette
@@ -447,12 +447,15 @@ class FindAudioThread(QThread):
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
-    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5', palette=LightPalette()))
+
+#    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5', palette=LightPalette()))
 ##
 ##    # setup stylesheet
 ##    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 ##    # or in new API
 ##    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+    apply_stylesheet(app, theme='dark_teal.xml')
+
     w = QuitApplication()
     w.show()
     sys.exit(app.exec_())
