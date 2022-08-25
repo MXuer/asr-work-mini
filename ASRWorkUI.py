@@ -24,6 +24,12 @@ import time
 import numpy as np
 import scipy.io.wavfile as wav
 import matplotlib.pyplot as plt
+
+#from qt_material import apply_stylesheet
+
+import qdarkstyle
+from qdarkstyle.light.palette import LightPalette
+
 # 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib
@@ -189,7 +195,6 @@ class QuitApplication(QMainWindow):
             self.createDB()
         else:
             self.loadExistedData()
-        print(self.results)
 
     def createDB(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -259,7 +264,6 @@ class QuitApplication(QMainWindow):
                         "AsrCERENCE": rec_text,
                         "Label": ref_text
                         }
-        print(self.results)
 
     def lastOne(self):
         ## 回退到上一条
@@ -340,7 +344,6 @@ class QuitApplication(QMainWindow):
 
     def onClickStart(self):
         wav_dir = self.le_audio.text()
-        print(wav_dir)
         if not os.path.exists(wav_dir):
             QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
@@ -350,9 +353,11 @@ class QuitApplication(QMainWindow):
             return
         if self.audio_name in self.results.keys():
             self.audio_index += 1
+            self.show_info(f"{self.audio_name} already done...")
             return
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
+            self.show_info(f"finised!")
             return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
@@ -360,7 +365,6 @@ class QuitApplication(QMainWindow):
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
         anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
         value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text, ref_text)
-        print(anno_result)
         self.cur.execute(anno_result, value)
         self.conn.commit()
         self.audio_name = self.audio2text[self.audio_index][0]
@@ -443,6 +447,12 @@ class FindAudioThread(QThread):
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5', palette=LightPalette()))
+##
+##    # setup stylesheet
+##    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+##    # or in new API
+##    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
     w = QuitApplication()
     w.show()
     sys.exit(app.exec_())
