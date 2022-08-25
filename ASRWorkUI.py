@@ -183,11 +183,13 @@ class QuitApplication(QMainWindow):
         self.db_path = "database/annotation.db"
         self.conn = None
         self.cur = None
+        self.results = {}
 
         if not os.path.exists(self.db_path):
             self.createDB()
         else:
             self.loadExistedData()
+        print(self.results)
 
     def createDB(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -223,13 +225,41 @@ class QuitApplication(QMainWindow):
         self.read_thread.audio_info.connect(self.getText)
         self.read_thread.start()
 
-
         return text_file
 
     def loadExistedData(self):
         ## 加载已经存在的db文件
         self.conn = sqlite3.connect(self.db_path)
         self.cur = self.conn.cursor()
+        cmd = """SELECT * FROM annotation"""
+        self.cur.execute(cmd)
+        history_data = self.cur.fetchall()
+        print(history_data)
+        for ele in history_data:
+            wavname, wavpath, is_accept, do_time, notation, rec_text, ref_text = ele
+            if wavname in self.results.keys():
+                prev_time = self.results[wavname]["time"]
+                if do_time > prev_time:
+                    self.results[wavname] = {
+                            "audio_name": wavname,
+                            "audio_path": wavpath,
+                            "is_accept": is_accept,
+                            "time": do_time,
+                            "notation": notation,
+                            "AsrCERENCE": rec_text,
+                            "Label": ref_text
+                            }
+            else:
+                self.results[wavname] = {
+                        "audio_name": wavname,
+                        "audio_path": wavpath,
+                        "is_accept": is_accept,
+                        "time": do_time,
+                        "notation": notation,
+                        "AsrCERENCE": rec_text,
+                        "Label": ref_text
+                        }
+        print(self.results)
 
     def lastOne(self):
         ## 回退到上一条
@@ -245,9 +275,14 @@ class QuitApplication(QMainWindow):
 
     def getText(self, audio2text):
         self.audio2text = audio2text
-        self.audio_name = self.audio2text[0][0]
-        self.le_rec.setText(self.audio2text[0][1])
-        self.le_ref.setText(self.audio2text[0][2])
+        for ele in self.audio2text:
+            if ele[0] in self.results.keys():
+                self.audio_index += 1
+        if self.audio_index == len(self.audio2text):
+            self.audio_index -= 1
+        self.audio_name = self.audio2text[self.audio_index][0]
+        self.le_rec.setText(self.audio2text[self.audio_index][1])
+        self.le_ref.setText(self.audio2text[self.audio_index][2])
         self.audio_index += 1
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
 
@@ -289,7 +324,7 @@ class QuitApplication(QMainWindow):
         ref_text = self.le_ref.text()
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
-        anno_result = f"""INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
+        anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
         value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'N', now_str, '', rec_text, ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
@@ -313,6 +348,9 @@ class QuitApplication(QMainWindow):
         if not os.path.exists(textfile):
             QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
+        if self.audio_name in self.results.keys():
+            self.audio_index += 1
+            return
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
             return
@@ -320,7 +358,7 @@ class QuitApplication(QMainWindow):
         ref_text = self.le_ref.text()
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
-        anno_result = f"""INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
+        anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
         value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text, ref_text)
         print(anno_result)
         self.cur.execute(anno_result, value)
