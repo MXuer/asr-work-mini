@@ -21,7 +21,6 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPalette, QPixmap, QBrush
-from playsound import playsound
 import time
 import numpy as np
 import scipy.io.wavfile as wav
@@ -439,14 +438,6 @@ class QuitApplication(QMainWindow):
     def setStaus(self, content):
         self.status.showMessage(content)
 
-class PlayThread(QThread):
-    done_signal = pyqtSignal()
-    def __init__(self, wav_path):
-        super(PlayThread, self).__init__()
-        self.wavp = wav_path
-
-    def run(self):
-        playsound(self.wavp)
 
 class PlayAndStopThread(QThread):
     def __init__(self, wav_path):
