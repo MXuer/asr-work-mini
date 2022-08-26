@@ -15,15 +15,12 @@ from collections import defaultdict
 from datetime import datetime
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
-                             QVBoxLayout, QLineEdit, QSpacerItem, QLabel, QTextEdit,
-                             QComboBox, QSizePolicy, QFileDialog, QMessageBox, QCheckBox,
+                             QVBoxLayout, QLineEdit, QTextEdit,
+                             QComboBox, QFileDialog, QMessageBox,
                              QGridLayout, QLabel)
 
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont, QPalette, QPixmap, QBrush
-import time
-import numpy as np
-import scipy.io.wavfile as wav
+from PyQt5.QtGui import QIcon, QFont
 import matplotlib.pyplot as plt
 
 import qdarkstyle
@@ -39,9 +36,6 @@ class QuitApplication(QMainWindow):
     def __init__(self):
         super(QuitApplication, self).__init__()
         self.setWindowTitle("ASR_NLU_WORK")
-
-        self.cwd = os.getcwd()
-
 
         self.resize(1200, 800)
         # self.setFixedSize(1200, 800)
@@ -64,15 +58,6 @@ class QuitApplication(QMainWindow):
         self.status = self.statusBar()
         self.status.setFont(font_le)
         self.status.showMessage("准备就绪...")
-
-        ## 输入、输出、字符集和忽略字符的spacer
-
-        sp_readpath_left = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        sp_readpath_mid = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-        sp_readpath_right = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
-
-
-
 
         ## 大屏幕布局
         self.contentHLayout = QHBoxLayout()
@@ -152,16 +137,26 @@ class QuitApplication(QMainWindow):
         #添加文本操作的label
         self.lbl_ref = QLabel("Label")
         self.lbl_rec = QLabel("AsrCERENCE")
+        self.lbl_1 = QLabel("text1")
+        self.lbl_2 = QLabel("text2")
         self.lbl_text_layout.addWidget(self.lbl_ref)
         self.lbl_text_layout.addWidget(self.lbl_rec)
+        self.lbl_text_layout.addWidget(self.lbl_1)
+        self.lbl_text_layout.addWidget(self.lbl_2)
         
         ## 添加文本操作的line edit
         self.le_ref = QLineEdit()
         self.le_ref.setFont(font_le)
         self.le_rec = QLineEdit()
         self.le_rec.setFont(font_le)
+        self.le_1 = QLineEdit()
+        self.le_1.setFont(font_le)
+        self.le_2 = QLineEdit()
+        self.le_2.setFont(font_le)
         self.le_text_layout.addWidget(self.le_ref)
         self.le_text_layout.addWidget(self.le_rec)
+        self.le_text_layout.addWidget(self.le_1)
+        self.le_text_layout.addWidget(self.le_2)
 
         # 添加打开文件和上一句下一句的组件
         self.op_widget = QWidget()
@@ -203,19 +198,19 @@ class QuitApplication(QMainWindow):
         self.op_choose_btn_widget.setLayout(self.op_choose_btn_layout)
         
         self.btn_prev = QPushButton("上一句")
-        #NOTE 实现该功能
+        # TODO 实现该功能
         # self.btn_prev.clicked.connect(self.onClickChooseTextFile)
         self.btn_prev.setFont(font_btn)
 
         self.btn_next = QPushButton("下一句")
-        # NOTE 实现该功能
+        # TODO 实现该功能
         # self.btn_next.clicked.connect(self.onClickAudioDir)
         self.btn_next.setFont(font_btn)
         
         self.op_choose_btn_layout.addWidget(self.btn_prev)
         self.op_choose_btn_layout.addWidget(self.btn_next)
         
-        #选择索引的下拉框
+        # TODO 选择索引的下拉框
         self.cb_choose_widget = QWidget()
         self.cb_layout = QGridLayout()
         self.cb_choose_widget.setLayout(self.cb_layout)
