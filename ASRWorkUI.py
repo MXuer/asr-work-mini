@@ -71,57 +71,8 @@ class QuitApplication(QMainWindow):
         sp_readpath_mid = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
         sp_readpath_right = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        ## 输入数据的布局
-        self.inputHLayout = QHBoxLayout()
-
-        self.btn_text = QPushButton("script")
-        self.le_textfile = QLineEdit()
-
-        self.btn_text.clicked.connect(self.onClickChooseTextFile)
-        self.btn_text.setFont(font_btn)
-        self.le_textfile.setFont(font_le)
-
-        self.inputHLayout.addWidget(self.btn_text)
-        self.inputHLayout.addWidget(self.le_textfile)
 
 
-        ##  输入语音布局
-        self.AudioHLayout = QHBoxLayout()
-
-        self.btn_audio = QPushButton("wave")
-        self.le_audio = QLineEdit()
-
-        self.lbl_progress = QLabel()
-
-        self.btn_audio.clicked.connect(self.onClickAudioDir)
-        self.btn_audio.setFont(font_btn)
-        self.le_audio.setFont(font_le)
-
-        self.AudioHLayout.addWidget(self.btn_audio)
-        self.AudioHLayout.addWidget(self.le_audio)
-        self.AudioHLayout.addWidget(self.lbl_progress)
-
-
-        ## 原始结果的布局
-        self.refHLayout = QHBoxLayout()
-
-        self.lbl_ref = QLabel("Label")
-        self.le_ref = QLineEdit()
-        self.le_ref.setFont(font_le)
-
-        self.refHLayout.addWidget(self.lbl_ref)
-        self.refHLayout.addWidget(self.le_ref)
-
-
-        ## 识别结果的布局
-        self.recHLayout = QHBoxLayout()
-
-        self.lbl_rec = QLabel("AsrCERENCE")
-        self.le_rec = QLineEdit()
-        self.le_rec.setFont(font_le)
-
-        self.recHLayout.addWidget(self.lbl_rec)
-        self.recHLayout.addWidget(self.le_rec)
 
         ## 大屏幕布局
         self.contentHLayout = QHBoxLayout()
@@ -130,94 +81,182 @@ class QuitApplication(QMainWindow):
         self.te_content.setReadOnly(True)
         self.contentHLayout.addWidget(self.te_content)
 
-        ## 检查text或者textgrid格式按钮布局
-        self.RunHLayout = QHBoxLayout()
+        self.audio2text = None
+        self.audio2path = None
+        self.audio_name = None
+        self.audio_index = 0
+        
+        # 设定主界面的layout
+        self.main_widget = QWidget()
+        self.main_layout = QGridLayout()
+        self.main_widget.setLayout(self.main_layout)
 
+        # 上下两个layout，一个用来放语音的播放界面，另外一个用来人工的操作以及tag什么都
+        self.up_widget = QWidget()
+        self.up_layout = QGridLayout()
+        self.up_widget.setLayout(self.up_layout)
+        
+        self.down_widget = QWidget()
+        self.down_layout = QGridLayout()
+        self.down_widget.setLayout(self.down_layout)
+        
+        # 把这两个qwidget放到main widget里面去
+        self.main_layout.addWidget(self.up_widget, 0, 0, 1, 6)
+        self.main_layout.addWidget(self.down_widget, 1, 0, 1, 6)
+        
+        # 把语音的波形界面添加到up_widget中
+        self.figure = plt.figure()
+        plt.gca().xaxis.set_major_locator(plt.NullLocator())
+        plt.gca().yaxis.set_major_locator(plt.NullLocator())
+        plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
+        ax = plt.axes()
+        ax.set_facecolor('black')
+        self.canvas = FigureCanvas(self.figure)
+        self.up_layout.addWidget(self.canvas)
+
+        # down widget中，左边是tag界面，右边是其他的操作界面
+        # 先添加一个左右的widget
+        self.down_left_widget = QWidget()
+        self.down_left_layout = QVBoxLayout()
+        self.down_left_widget.setLayout(self.down_left_layout)
+        
+         ## 把tag widget添加进去
+        self.lbl_tag = QLabel("TAG")
+        self.lbl_tag.setFont(font_le)
+        self.down_left_layout.addWidget(self.lbl_tag)
+
+        # 添加一个右边的widget的界面
+        self.down_right_widget = QWidget()
+        self.down_right_layout = QGridLayout()
+        self.down_right_widget.setLayout(self.down_right_layout)
+
+        self.down_layout.addWidget(self.down_left_widget, 0, 2, 6, 3)
+        self.down_layout.addWidget(self.down_right_widget, 0, 3, 6, 9)
+        
+        ## 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
+        self.text_widget = QWidget()
+        self.text_layout = QHBoxLayout()
+        self.text_widget.setLayout(self.text_layout)
+        
+        self.lbl_text_widget = QWidget()
+        self.lbl_text_layout = QVBoxLayout()
+        self.lbl_text_widget.setLayout(self.lbl_text_layout)
+
+        self.le_text_widget = QWidget()
+        self.le_text_layout = QVBoxLayout()
+        self.le_text_widget.setLayout(self.le_text_layout)
+        
+        self.text_layout.addWidget(self.lbl_text_widget)
+        self.text_layout.addWidget(self.le_text_widget)
+
+        #添加文本操作的label
+        self.lbl_ref = QLabel("Label")
+        self.lbl_rec = QLabel("AsrCERENCE")
+        self.lbl_text_layout.addWidget(self.lbl_ref)
+        self.lbl_text_layout.addWidget(self.lbl_rec)
+        
+        ## 添加文本操作的line edit
+        self.le_ref = QLineEdit()
+        self.le_ref.setFont(font_le)
+        self.le_rec = QLineEdit()
+        self.le_rec.setFont(font_le)
+        self.le_text_layout.addWidget(self.le_ref)
+        self.le_text_layout.addWidget(self.le_rec)
+
+        # 添加打开文件和上一句下一句的组件
+        self.op_widget = QWidget()
+        self.op_layout = QHBoxLayout()
+        self.op_widget.setLayout(self.op_layout)
+        
+        # 左边两个button
+        self.op_btn_widget = QWidget()
+        self.op_btn_layout = QVBoxLayout()
+        self.op_btn_widget.setLayout(self.op_btn_layout)
+        
+        self.btn_text = QPushButton("script")
+        self.btn_text.clicked.connect(self.onClickChooseTextFile)
+        self.btn_text.setFont(font_btn)
+
+        self.btn_audio = QPushButton("wave")
+        self.btn_audio.clicked.connect(self.onClickAudioDir)
+        self.btn_audio.setFont(font_btn)
+        
+        self.op_btn_layout.addWidget(self.btn_text)
+        self.op_btn_layout.addWidget(self.btn_audio)
+
+        # 中间的路径line edit
+        self.op_le_widget = QWidget()
+        self.op_le_layout = QVBoxLayout()
+        self.op_le_widget.setLayout(self.op_le_layout)
+
+        self.le_audio = QLineEdit()
+        self.le_audio.setFont(font_le)
+        self.le_textfile = QLineEdit()
+        self.le_textfile.setFont(font_le)
+
+        self.op_le_layout.addWidget(self.le_textfile)
+        self.op_le_layout.addWidget(self.le_audio)
+
+        # 中间的上一句下一句btn
+        self.op_choose_btn_widget = QWidget()
+        self.op_choose_btn_layout = QVBoxLayout()
+        self.op_choose_btn_widget.setLayout(self.op_choose_btn_layout)
+        
+        self.btn_prev = QPushButton("上一句")
+        #NOTE 实现该功能
+        # self.btn_prev.clicked.connect(self.onClickChooseTextFile)
+        self.btn_prev.setFont(font_btn)
+
+        self.btn_next = QPushButton("下一句")
+        # NOTE 实现该功能
+        # self.btn_next.clicked.connect(self.onClickAudioDir)
+        self.btn_next.setFont(font_btn)
+        
+        self.op_choose_btn_layout.addWidget(self.btn_prev)
+        self.op_choose_btn_layout.addWidget(self.btn_next)
+        
+        #选择索引的下拉框
+        self.cb_choose_widget = QWidget()
+        self.cb_layout = QGridLayout()
+        self.cb_choose_widget.setLayout(self.cb_layout)
+        
+        self.cb_choose = QComboBox()
+        
+        self.cb_layout.addWidget(self.cb_choose)
+
+        self.op_layout.addWidget(self.op_btn_widget)
+        self.op_layout.addWidget(self.op_le_widget)
+        self.op_layout.addWidget(self.op_choose_btn_widget)
+        self.op_layout.addWidget(self.cb_choose_widget)
+        
+        self.run_widget = QWidget()
+        self.run_layout = QHBoxLayout()
+        self.run_widget.setLayout(self.run_layout)
+        
         self.btn_run = QPushButton("接受")
         self.btn_run.setFont(font_le)
         self.btn_run.setMinimumSize(20, 20)
         self.btn_clear = QPushButton("不接受")
         self.btn_clear.setFont(font_le)
         self.btn_clear.setMinimumSize(20, 20)
-        self.btn_close = QPushButton("关闭")
-        self.btn_close.setFont(font_le)
-        self.btn_close.setMinimumSize(20, 20)
+        self.btn_export = QPushButton("导出")
+        self.btn_export.setFont(font_le)
+        self.btn_export.setMinimumSize(20, 20)
 
         self.btn_run.clicked.connect(self.onClickStart)
-        self.btn_close.clicked.connect(self.close)
+        self.btn_export.clicked.connect(self.close)
         self.btn_clear.clicked.connect(self.onClickClear)
 
-        self.RunHLayout.addItem(sp_readpath_left)
-        self.RunHLayout.addWidget(self.btn_run)
-        self.RunHLayout.addItem(sp_readpath_mid)
-        self.RunHLayout.addWidget(self.btn_clear)
-        self.RunHLayout.addItem(sp_readpath_mid)
-        self.RunHLayout.addWidget(self.btn_close)
-        self.RunHLayout.addItem(sp_readpath_right)
-
-
-
-        self.figure = plt.figure()
-        plt.gca().xaxis.set_major_locator(plt.NullLocator())
-        plt.gca().yaxis.set_major_locator(plt.NullLocator())
-        plt.subplots_adjust(top=1,bottom=0,left=0,right=1,hspace=0,wspace=0)
-        ax = plt.axes()
-        ax.set_facecolor('black')
-        self.canvas = FigureCanvas(self.figure)
-
-        self.ShowHLayout =QHBoxLayout()
-        self.ShowHLayout.addWidget(self.canvas)
-
-        ## 将子布局全部添加到整体布局
-#        self.globalVLayout.addLayout(self.ShowHLayout)
-#        self.globalVLayout.addLayout(self.refHLayout)
-#        self.globalVLayout.addLayout(self.recHLayout)
-        self.globalVLayout.addLayout(self.inputHLayout)
-        self.globalVLayout.addLayout(self.AudioHLayout)
-#        self.globalVLayout.addLayout(self.contentHLayout)
-        self.globalVLayout.addLayout(self.RunHLayout)
-
-        self.audio2text = None
-        self.audio2path = None
-        self.audio_name = None
-        self.audio_index = 0
-
-
-        self.tag_widget = QWidget()
-
-
-
-
-        self.TextPlusLayout = QHBoxLayout()
-        self.TextPlusLayout.addLayout(self.globalVLayout)
-        self.TextPlusLayout.addLayout(self.contentHLayout)
-
-        self.op_widget = QWidget()
-        self.op_widget.setLayout(self.TextPlusLayout)
-
-
-        self.TextLayout = QVBoxLayout()
-        self.TextLayout.addLayout(self.refHLayout)
-        self.TextLayout.addLayout(self.recHLayout)
-
-
-        self.text_widget = QWidget()
-        self.text_widget.setLayout(self.TextLayout)
-
-
-
-        self.play_widget = QWidget()
-        self.play_widget.setLayout(self.ShowHLayout)
-
-        self.main_layout = QGridLayout()
-        mainFrame = QWidget()
-        mainFrame.setLayout(self.main_layout)
-        self.main_layout.addWidget(self.play_widget, 0, 0, 3, 12)
-        self.main_layout.addWidget(self.tag_widget, 3, 0, 4, 2)
-
-        self.main_layout.addWidget(self.text_widget, 3, 2, 2, 10)
-        self.main_layout.addWidget(self.op_widget, 3, 2, 2, 10)
-        self.setCentralWidget(mainFrame)
+        self.run_layout.addWidget(self.btn_run)
+        self.run_layout.addWidget(self.btn_clear)
+        self.run_layout.addWidget(self.btn_export)
+        
+        
+        self.down_right_layout.addWidget(self.text_widget)
+        self.down_right_layout.addWidget(self.op_widget)
+        self.down_right_layout.addWidget(self.run_widget)
+        
+        self.setCentralWidget(self.main_widget)
 
         self.db_path = "database/annotation.db"
         self.conn = None
@@ -254,8 +293,7 @@ class QuitApplication(QMainWindow):
 
 
     def onClickChooseTextFile(self):
-        text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", self.cwd,
-                                              "Text Files(*.txt)")
+        text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", self.cwd, "Text Files(*.txt)")
         self.le_textfile.setText(text_file)
         self.te_content.append(f"Reading Text File from {text_file}...")
         self.read_thread = ReadTextFileThread(text_file)
@@ -320,7 +358,6 @@ class QuitApplication(QMainWindow):
         self.le_rec.setText(self.audio2text[self.audio_index][1])
         self.le_ref.setText(self.audio2text[self.audio_index][2])
         self.audio_index += 1
-        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
 
 
     def onClickAudioDir(self):
@@ -355,7 +392,6 @@ class QuitApplication(QMainWindow):
         if not os.path.exists(textfile):
             QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
-        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
             return
         rec_text = self.le_rec.text()
@@ -391,7 +427,6 @@ class QuitApplication(QMainWindow):
             self.audio_index += 1
             self.show_info(f"{self.audio_name} already done...")
             return
-        self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
             self.show_info("finised!")
             return
@@ -463,7 +498,7 @@ class PlayAndStopThread(QThread):
         # 播放
         while data != '':
             if self.stop:
-                break
+                return
             stream.write(data)
             data = wf.readframes(CHUNK)
 
@@ -476,7 +511,7 @@ class PlayAndStopThread(QThread):
 
 class ReadTextFileThread(QThread):
     audio_info = pyqtSignal(list)
-    def __init__(self, text_file):
+    def __init__(self, text_file: str) -> None:
         super(ReadTextFileThread, self).__init__()
         self.text_file = text_file
 
