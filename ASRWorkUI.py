@@ -16,7 +16,8 @@ from datetime import datetime
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
                              QVBoxLayout, QLineEdit, QSpacerItem, QLabel, QTextEdit,
-                             QComboBox, QSizePolicy, QFileDialog, QMessageBox, QCheckBox, QLabel)
+                             QComboBox, QSizePolicy, QFileDialog, QMessageBox, QCheckBox,
+                             QGridLayout, QLabel)
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont, QPalette, QPixmap, QBrush
@@ -74,7 +75,7 @@ class QuitApplication(QMainWindow):
         ## 输入数据的布局
         self.inputHLayout = QHBoxLayout()
 
-        self.btn_text = QPushButton("输入文本路径")
+        self.btn_text = QPushButton("script")
         self.le_textfile = QLineEdit()
 
         self.btn_text.clicked.connect(self.onClickChooseTextFile)
@@ -88,7 +89,7 @@ class QuitApplication(QMainWindow):
         ##  输入语音布局
         self.AudioHLayout = QHBoxLayout()
 
-        self.btn_audio = QPushButton("输入音频文件夹: ")
+        self.btn_audio = QPushButton("wave")
         self.le_audio = QLineEdit()
 
         self.lbl_progress = QLabel()
@@ -169,12 +170,12 @@ class QuitApplication(QMainWindow):
         self.ShowHLayout.addWidget(self.canvas)
 
         ## 将子布局全部添加到整体布局
-        self.globalVLayout.addLayout(self.ShowHLayout)
-        self.globalVLayout.addLayout(self.refHLayout)
-        self.globalVLayout.addLayout(self.recHLayout)
+#        self.globalVLayout.addLayout(self.ShowHLayout)
+#        self.globalVLayout.addLayout(self.refHLayout)
+#        self.globalVLayout.addLayout(self.recHLayout)
         self.globalVLayout.addLayout(self.inputHLayout)
         self.globalVLayout.addLayout(self.AudioHLayout)
-        self.globalVLayout.addLayout(self.contentHLayout)
+#        self.globalVLayout.addLayout(self.contentHLayout)
         self.globalVLayout.addLayout(self.RunHLayout)
 
         self.audio2text = None
@@ -182,8 +183,41 @@ class QuitApplication(QMainWindow):
         self.audio_name = None
         self.audio_index = 0
 
+
+        self.tag_widget = QWidget()
+
+
+
+
+        self.TextPlusLayout = QHBoxLayout()
+        self.TextPlusLayout.addLayout(self.globalVLayout)
+        self.TextPlusLayout.addLayout(self.contentHLayout)
+
+        self.op_widget = QWidget()
+        self.op_widget.setLayout(self.TextPlusLayout)
+
+
+        self.TextLayout = QVBoxLayout()
+        self.TextLayout.addLayout(self.refHLayout)
+        self.TextLayout.addLayout(self.recHLayout)
+
+
+        self.text_widget = QWidget()
+        self.text_widget.setLayout(self.TextLayout)
+
+
+
+        self.play_widget = QWidget()
+        self.play_widget.setLayout(self.ShowHLayout)
+
+        self.main_layout = QGridLayout()
         mainFrame = QWidget()
-        mainFrame.setLayout(self.globalVLayout)
+        mainFrame.setLayout(self.main_layout)
+        self.main_layout.addWidget(self.play_widget, 0, 0, 3, 12)
+        self.main_layout.addWidget(self.tag_widget, 3, 0, 4, 2)
+
+        self.main_layout.addWidget(self.text_widget, 3, 2, 2, 10)
+        self.main_layout.addWidget(self.op_widget, 3, 2, 2, 10)
         self.setCentralWidget(mainFrame)
 
         self.db_path = "database/annotation.db"
