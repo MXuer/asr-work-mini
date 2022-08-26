@@ -7,13 +7,14 @@ Created on Wed Mar 31 23:16:43 2021
 
 import os
 import sys
+import wave
 import librosa
 from pathlib import Path
 import time
 from collections import defaultdict
 from datetime import datetime
 
-from PyQt6.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
+from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
                              QVBoxLayout, QLineEdit, QSpacerItem, QLabel, QTextEdit,
                              QComboBox, QSizePolicy, QFileDialog, QMessageBox, QCheckBox, QLabel)
 
@@ -25,21 +26,19 @@ import numpy as np
 import scipy.io.wavfile as wav
 import matplotlib.pyplot as plt
 
-from qt_material import apply_stylesheet
-
 import qdarkstyle
-from qdarkstyle.light.palette import LightPalette
+import pyaudio
 
-# 使用 matplotlib中的FigureCanvas (在使用 Qt5 Backends中 FigureCanvas继承自QtWidgets.QWidget)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib
 import sqlite3
 matplotlib.use('Qt5Agg')
 
 class QuitApplication(QMainWindow):
+    signal = pyqtSignal()
     def __init__(self):
         super(QuitApplication, self).__init__()
-        self.setWindowTitle("AudioEventClassifier")
+        self.setWindowTitle("ASR_NLU_WORK")
 
         self.cwd = os.getcwd()
 
@@ -82,12 +81,8 @@ class QuitApplication(QMainWindow):
         self.btn_text.setFont(font_btn)
         self.le_textfile.setFont(font_le)
 
-        # self.inputHLayout.addItem(sp_readpath_left)
         self.inputHLayout.addWidget(self.btn_text)
-        # self.inputHLayout.addItem(sp_readpath_mid)
         self.inputHLayout.addWidget(self.le_textfile)
-        # self.inputHLayout.addItem(sp_readpath_right)
-
 
 
         ##  输入语音布局
@@ -163,6 +158,11 @@ class QuitApplication(QMainWindow):
 
 
         self.figure = plt.figure()
+        plt.gca().xaxis.set_major_locator(plt.NullLocator())
+        plt.gca().yaxis.set_major_locator(plt.NullLocator())
+        plt.subplots_adjust(top=1,bottom=0,left=0,right=1,hspace=0,wspace=0)
+        ax = plt.axes()
+        ax.set_facecolor('black')
         self.canvas = FigureCanvas(self.figure)
 
         self.ShowHLayout =QHBoxLayout()
@@ -216,7 +216,7 @@ class QuitApplication(QMainWindow):
     def plot_(self, audio_path):
         plt.cla()
         y, sr = librosa.load(audio_path)
-        ax = plt.plot(y)
+        plt.plot(y, color='navajowhite')
         self.canvas.draw()
 
 
@@ -239,7 +239,6 @@ class QuitApplication(QMainWindow):
         cmd = """SELECT * FROM annotation"""
         self.cur.execute(cmd)
         history_data = self.cur.fetchall()
-        print(history_data)
         for ele in history_data:
             wavname, wavpath, is_accept, do_time, notation, rec_text, ref_text = ele
             if wavname in self.results.keys():
@@ -307,12 +306,14 @@ class QuitApplication(QMainWindow):
         if self.audio_name:
             audio_path = self.audio2path[self.audio_name]
             self.plot_(audio_path)
-            self.play_thread = PlayThread(audio_path)
+            self.play_thread = PlayAndStopThread(audio_path)
+            self.signal.connect(self.play_thread.accept)
             self.play_thread.start()
 
 
 
     def onClickClear(self):
+        self.signal.emit()
         wav_dir = self.le_audio.text()
         if not os.path.exists(wav_dir):
             QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
@@ -338,11 +339,13 @@ class QuitApplication(QMainWindow):
 
         audio_path = self.audio2path[self.audio_name]
         self.plot_(audio_path)
-        self.play_thread = PlayThread(audio_path)
+        self.play_thread = PlayAndStopThread(audio_path)
+        self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
         self.audio_index += 1
 
     def onClickStart(self):
+        self.signal.emit()
         wav_dir = self.le_audio.text()
         if not os.path.exists(wav_dir):
             QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
@@ -357,7 +360,7 @@ class QuitApplication(QMainWindow):
             return
         self.lbl_progress.setText(f"{self.audio_index}/{len(self.audio2text)}")
         if self.audio_index == len(self.audio2text):
-            self.show_info(f"finised!")
+            self.show_info("finised!")
             return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
@@ -373,7 +376,8 @@ class QuitApplication(QMainWindow):
 
         audio_path = self.audio2path[self.audio_name]
         self.plot_(audio_path)
-        self.play_thread = PlayThread(audio_path)
+        self.play_thread = PlayAndStopThread(audio_path)
+        self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
         self.audio_index += 1
 
@@ -383,7 +387,8 @@ class QuitApplication(QMainWindow):
         if not os.path.exists(wav_path):
             QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
-        self.play_thread = PlayThread(wav_path)
+        self.play_thread = PlayAndStopThread(wav_path)
+        self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
 
     def setDone(self):
@@ -409,7 +414,40 @@ class PlayThread(QThread):
     def run(self):
         playsound(self.wavp)
 
+class PlayAndStopThread(QThread):
+    def __init__(self, wav_path):
+        super(PlayAndStopThread, self).__init__()
+        self.wavp = wav_path
+        self.stop = False
 
+    def accept(self):
+        self.stop = True
+
+    def run(self):
+        CHUNK = 1024
+        wf = wave.open(self.wavp, 'rb')   #(sys.argv[1], 'rb')
+        p = pyaudio.PyAudio()   #创建一个播放器
+        # 打开数据流
+        stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                        channels=wf.getnchannels(),
+                        rate=wf.getframerate(),
+                        output=True)
+        # 读取数据
+        data = wf.readframes(CHUNK)
+
+        # 播放
+        while data != '':
+            if self.stop:
+                break
+            stream.write(data)
+            data = wf.readframes(CHUNK)
+
+        # 停止数据流
+        stream.stop_stream()
+        stream.close()
+
+        # 关闭 PyAudio
+        p.terminate()
 
 class ReadTextFileThread(QThread):
     audio_info = pyqtSignal(list)
@@ -448,13 +486,11 @@ class FindAudioThread(QThread):
 if __name__=="__main__":
     app = QApplication(sys.argv)
 
-#    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5', palette=LightPalette()))
-##
-##    # setup stylesheet
-##    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-##    # or in new API
-##    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
-    apply_stylesheet(app, theme='dark_teal.xml')
+
+    # setup stylesheet
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    # or in new API
+    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
     w = QuitApplication()
     w.show()

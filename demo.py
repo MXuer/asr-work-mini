@@ -1,23 +1,13 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Aug 25 18:14:17 2022
+from QCandyUi.CandyWindow import colorful
 
-@author: duhu
-"""
+@colorful('blueDeep')
 
-import sys
-from PySide6 import QtWidgets
-# from PySide2 import QtWidgets
-# from PyQt5 import QtWidgets
-from qt_material import apply_stylesheet
+class MainWindow(QMainWindow, Ui_MainWindow):
 
-# create the application and the main window
-app = QtWidgets.QApplication(sys.argv)
-window = QtWidgets.QMainWindow()
 
-# setup stylesheet
-apply_stylesheet(app, theme='dark_teal.xml')
+if __name__ == '__main__':
 
-# run
-window.show()
-app.exec_()
+    app = QApplication(sys.argv)
+    ui = MainWindow()
+    ui.show()
+    sys.exit(app.exec_())

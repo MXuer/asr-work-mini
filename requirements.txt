@@ -1,6 +1,6 @@
 pyqt5==5.12.0
-qtawesome
 playsound
 pydub
 librosa
 qt_material
+qdarkstyle
