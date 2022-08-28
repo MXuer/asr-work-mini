@@ -147,7 +147,7 @@ class QuitApplication(QMainWindow):
         self.comments_layout = QHBoxLayout()
         self.comments_widget.setLayout(self.comments_layout)
 
-        self.le_commets = QTextEdit()
+        self.le_commets = QLineEdit()
         self.le_commets.setFont(font_le)
         self.cbox_commets = CheckableComboBox()
 
@@ -352,12 +352,12 @@ class QuitApplication(QMainWindow):
 
     def showInCommentsLineEdit(self):
         checked_comments = self.cbox_commets.getCheckItem()
-        self.le_commets.setPlainText("aaaa")
+        self.le_commets.setText("aaaa")
         print(checked_comments)
         if checked_comments:
-            self.le_commets.setPlainText("\n".join(checked_comments))
+            self.le_commets.setText("\n".join(checked_comments))
         else:
-            self.le_commets.setPlainText("")
+            self.le_commets.setText("")
 
     def onClickPrev(self):
         self.signal.emit()
