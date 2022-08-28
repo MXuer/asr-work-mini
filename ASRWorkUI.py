@@ -163,7 +163,6 @@ class QuitApplication(QMainWindow):
         self.comments_layout.addWidget(self.cbox_commets)
 
         ## 添加文本操作的line edit
-        self.le_commets.setPlainText("aaaa")
         self.le_ref = QLineEdit()
         self.le_ref.setFont(font_le)
         self.le_rec = QLineEdit()
