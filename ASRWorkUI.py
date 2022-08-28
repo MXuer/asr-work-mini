@@ -37,7 +37,7 @@ class QuitApplication(QMainWindow):
         super(QuitApplication, self).__init__()
         self.setWindowTitle("ASR_NLU_WORK")
 
-        self.resize(1200, 800)
+        self.resize(1000, 600)
         # self.setFixedSize(1200, 800)
 
         ## 整体布局
@@ -87,7 +87,7 @@ class QuitApplication(QMainWindow):
         
         # 把这两个qwidget放到main widget里面去
         self.main_layout.addWidget(self.up_widget, 0, 0, 1, 6)
-        self.main_layout.addWidget(self.down_widget, 1, 0, 1, 6)
+        self.main_layout.addWidget(self.down_widget, 1, 0, 4, 6)
         
         # 把语音的波形界面添加到up_widget中
         self.figure = plt.figure()
@@ -99,24 +99,22 @@ class QuitApplication(QMainWindow):
         self.canvas = FigureCanvas(self.figure)
         self.up_layout.addWidget(self.canvas)
 
-        # down widget中，左边是tag界面，右边是其他的操作界面
-        # 先添加一个左右的widget
-        self.down_left_widget = QWidget()
-        self.down_left_layout = QVBoxLayout()
-        self.down_left_widget.setLayout(self.down_left_layout)
-        
-         ## 把tag widget添加进去
-        self.lbl_tag = QLabel("TAG")
-        self.lbl_tag.setFont(font_le)
-        self.down_left_layout.addWidget(self.lbl_tag)
+        # # down widget中，左边是tag界面，右边是其他的操作界面
+        # # 先添加一个左右的widget
+        # self.down_left_widget = QWidget()
+        # self.down_left_layout = QVBoxLayout()
+        # self.down_left_widget.setLayout(self.down_left_layout)
+        #
+        #  ## 把tag widget添加进去
+        # self.lbl_tag = QLabel("TAG")
+        # self.lbl_tag.setFont(font_le)
+        # self.down_left_layout.addWidget(self.lbl_tag)
 
         # 添加一个右边的widget的界面
-        self.down_right_widget = QWidget()
-        self.down_right_layout = QGridLayout()
-        self.down_right_widget.setLayout(self.down_right_layout)
+        # self.down_right_widget = QWidget()
+        # self.down_right_layout = QGridLayout()
+        # self.down_right_widget.setLayout(self.down_right_layout)
 
-        self.down_layout.addWidget(self.down_left_widget, 0, 2, 6, 3)
-        self.down_layout.addWidget(self.down_right_widget, 0, 3, 6, 9)
         
         ## 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
         self.text_widget = QWidget()
@@ -137,13 +135,29 @@ class QuitApplication(QMainWindow):
         #添加文本操作的label
         self.lbl_ref = QLabel("Label")
         self.lbl_rec = QLabel("AsrCERENCE")
-        self.lbl_1 = QLabel("text1")
-        self.lbl_2 = QLabel("text2")
+        self.lbl_1 = QLabel("CERENCE")
+        self.lbl_2 = QLabel("COMMETS")
         self.lbl_text_layout.addWidget(self.lbl_ref)
         self.lbl_text_layout.addWidget(self.lbl_rec)
         self.lbl_text_layout.addWidget(self.lbl_1)
         self.lbl_text_layout.addWidget(self.lbl_2)
-        
+
+        # commets的布局
+        self.comments_widget = QWidget()
+        self.comments_layout = QHBoxLayout()
+        self.comments_widget.setLayout(self.comments_layout)
+
+        self.le_commets = QLineEdit()
+        self.le_commets.setFont(font_le)
+        self.cbox_commets = CheckableComboBox()
+
+        self.cbox_commets.addItem("全选")
+        for i in range(6):
+            self.cbox_commets.addItem("Combobox Item " + str(i))
+
+        self.comments_layout.addWidget(self.le_commets)
+        self.comments_layout.addWidget(self.cbox_commets)
+
         ## 添加文本操作的line edit
         self.le_ref = QLineEdit()
         self.le_ref.setFont(font_le)
@@ -151,13 +165,12 @@ class QuitApplication(QMainWindow):
         self.le_rec.setFont(font_le)
         self.le_1 = QLineEdit()
         self.le_1.setFont(font_le)
-        self.le_2 = QLineEdit()
-        self.le_2.setFont(font_le)
         self.le_text_layout.addWidget(self.le_ref)
         self.le_text_layout.addWidget(self.le_rec)
         self.le_text_layout.addWidget(self.le_1)
-        self.le_text_layout.addWidget(self.le_2)
+        self.le_text_layout.addWidget(self.comments_widget)
 
+        
         # 添加打开文件和上一句下一句的组件
         self.op_widget = QWidget()
         self.op_layout = QHBoxLayout()
@@ -246,10 +259,12 @@ class QuitApplication(QMainWindow):
         self.run_layout.addWidget(self.btn_clear)
         self.run_layout.addWidget(self.btn_export)
         
-        
-        self.down_right_layout.addWidget(self.text_widget)
-        self.down_right_layout.addWidget(self.op_widget)
-        self.down_right_layout.addWidget(self.run_widget)
+
+        # self.down_layout.addWidget(self.down_left_widget, 0, 2, 6, 3)
+        # self.down_layout.addWidget(self.down_right_widget, 0, 3, 6, 9)
+        self.down_layout.addWidget(self.text_widget)
+        self.down_layout.addWidget(self.op_widget)
+        self.down_layout.addWidget(self.run_widget)
         
         self.setCentralWidget(self.main_widget)
 
@@ -288,7 +303,7 @@ class QuitApplication(QMainWindow):
 
 
     def onClickChooseTextFile(self):
-        text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", self.cwd, "Text Files(*.txt)")
+        text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", "", "Text Files(*.txt)")
         self.le_textfile.setText(text_file)
         self.te_content.append(f"Reading Text File from {text_file}...")
         self.read_thread = ReadTextFileThread(text_file)
@@ -537,15 +552,67 @@ class FindAudioThread(QThread):
 
         self.audio_info.emit(audio2path)
 
+from PyQt5 import QtCore, QtGui
+
+class CheckableComboBox(QComboBox):
+    def __init__(self, parent=None):
+        super(CheckableComboBox, self).__init__(parent)
+        self.setModel(QtGui.QStandardItemModel(self))
+        self.view().pressed.connect(self.handleItemPressed)
+        self.checkedItems = []
+        self.view().pressed.connect(self.get_all)
+        self.view().pressed.connect(self.getCheckItem)
+        self.status = 0
+    def handleItemPressed(self, index):                            #这个函数是每次选择项目时判断状态时自动调用的，不用管（自动调用）
+        item = self.model().itemFromIndex(index)
+        if item.checkState() == QtCore.Qt.Checked:
+            item.setCheckState(QtCore.Qt.Unchecked)
+        else:
+            item.setCheckState(QtCore.Qt.Checked)
+    def getCheckItem(self):
+        # getCheckItem方法可以获得选择的项目列表，自动调用。
+        for index in range(1,self.count()):
+            item = self.model().item(index)
+            if item.checkState() == QtCore.Qt.Checked:
+                if item.text() not in self.checkedItems:
+                    self.checkedItems.append(item.text())
+            else:
+                if item.text() in self.checkedItems:
+                    self.checkedItems.remove(item.text())
+        print("self.checkedItems为：",self.checkedItems)
+        return self.checkedItems                    #实例化的时候直接调用这个self.checkedItems就能获取到选中的值，不需要调用这个方法，方法会在选择选项的时候自动被调用。
+    def get_all(self):                            #实现全选功能的函数（自动调用）
+        all_item = self.model().item(0)
+        for index in range(1,self.count()):       #判断是否是全选的状态，如果不是，全选按钮应该处于未选中的状态
+            if self.status ==1:
+                if self.model().item(index).checkState() == QtCore.Qt.Unchecked:
+                    all_item.setCheckState(QtCore.Qt.Unchecked)
+                    self.status = 0
+                    break
+        if all_item.checkState() == QtCore.Qt.Checked:
+            if self.status == 0 :
+                for index in range(self.count()):
+                    self.model().item(index).setCheckState(QtCore.Qt.Checked)
+                    self.status = 1
+        elif all_item.checkState() == QtCore.Qt.Unchecked:
+            for index in range(self.count()):
+                if  self.status == 1 :
+                    self.model().item(index).setCheckState(QtCore.Qt.Unchecked)
+            self.status = 0
+
+
+
+
+
 
 if __name__=="__main__":
     app = QApplication(sys.argv)
 
 
     # setup stylesheet
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
-    # or in new API
-    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+    # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    # # or in new API
+    # app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
     w = QuitApplication()
     w.show()
