@@ -15,7 +15,7 @@ from collections import defaultdict
 from datetime import datetime
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
-                             QVBoxLayout, QLineEdit, QTextEdit,
+                             QVBoxLayout, QLineEdit, QTextEdit, QTextEdit,
                              QComboBox, QFileDialog, QMessageBox,
                              QGridLayout, QLabel)
 
@@ -70,7 +70,7 @@ class QuitApplication(QMainWindow):
         self.audio2path = None
         self.audio_name = None
         self.audio_index = 0
-        
+
         # 设定主界面的layout
         self.main_widget = QWidget()
         self.main_layout = QGridLayout()
@@ -80,15 +80,15 @@ class QuitApplication(QMainWindow):
         self.up_widget = QWidget()
         self.up_layout = QGridLayout()
         self.up_widget.setLayout(self.up_layout)
-        
+
         self.down_widget = QWidget()
         self.down_layout = QGridLayout()
         self.down_widget.setLayout(self.down_layout)
-        
+
         # 把这两个qwidget放到main widget里面去
         self.main_layout.addWidget(self.up_widget, 0, 0, 1, 6)
         self.main_layout.addWidget(self.down_widget, 1, 0, 4, 6)
-        
+
         # 把语音的波形界面添加到up_widget中
         self.figure = plt.figure()
         plt.gca().xaxis.set_major_locator(plt.NullLocator())
@@ -115,12 +115,12 @@ class QuitApplication(QMainWindow):
         # self.down_right_layout = QGridLayout()
         # self.down_right_widget.setLayout(self.down_right_layout)
 
-        
+
         ## 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
         self.text_widget = QWidget()
         self.text_layout = QHBoxLayout()
         self.text_widget.setLayout(self.text_layout)
-        
+
         self.lbl_text_widget = QWidget()
         self.lbl_text_layout = QVBoxLayout()
         self.lbl_text_widget.setLayout(self.lbl_text_layout)
@@ -128,37 +128,42 @@ class QuitApplication(QMainWindow):
         self.le_text_widget = QWidget()
         self.le_text_layout = QVBoxLayout()
         self.le_text_widget.setLayout(self.le_text_layout)
-        
+
         self.text_layout.addWidget(self.lbl_text_widget)
         self.text_layout.addWidget(self.le_text_widget)
 
         #添加文本操作的label
         self.lbl_ref = QLabel("Label")
         self.lbl_rec = QLabel("AsrCERENCE")
-        self.lbl_1 = QLabel("CERENCE")
-        self.lbl_2 = QLabel("COMMETS")
+        self.lbl_cerence = QLabel("CERENCE")
+        self.lbl_comments = QLabel("COMMETS")
         self.lbl_text_layout.addWidget(self.lbl_ref)
         self.lbl_text_layout.addWidget(self.lbl_rec)
-        self.lbl_text_layout.addWidget(self.lbl_1)
-        self.lbl_text_layout.addWidget(self.lbl_2)
+        self.lbl_text_layout.addWidget(self.lbl_cerence)
+        self.lbl_text_layout.addWidget(self.lbl_comments)
 
         # commets的布局
         self.comments_widget = QWidget()
         self.comments_layout = QHBoxLayout()
         self.comments_widget.setLayout(self.comments_layout)
 
-        self.le_commets = QLineEdit()
+        self.le_commets = QTextEdit()
         self.le_commets.setFont(font_le)
         self.cbox_commets = CheckableComboBox()
 
+        ## 读取comments文件
         self.cbox_commets.addItem("全选")
-        for i in range(6):
-            self.cbox_commets.addItem("Combobox Item " + str(i))
+        comment_file = os.path.join(os.getcwd(), "comments", "comments.txt")
+        for line in open(comment_file, encoding='utf-8-sig'):
+            comment = line.strip()
+            self.cbox_commets.addItem(comment)
+        self.cbox_commets.currentIndexChanged.connect(self.showInCommentsLineEdit)
 
         self.comments_layout.addWidget(self.le_commets)
         self.comments_layout.addWidget(self.cbox_commets)
 
         ## 添加文本操作的line edit
+        self.le_commets.setPlainText("aaaa")
         self.le_ref = QLineEdit()
         self.le_ref.setFont(font_le)
         self.le_rec = QLineEdit()
@@ -170,17 +175,17 @@ class QuitApplication(QMainWindow):
         self.le_text_layout.addWidget(self.le_1)
         self.le_text_layout.addWidget(self.comments_widget)
 
-        
+
         # 添加打开文件和上一句下一句的组件
         self.op_widget = QWidget()
         self.op_layout = QHBoxLayout()
         self.op_widget.setLayout(self.op_layout)
-        
+
         # 左边两个button
         self.op_btn_widget = QWidget()
         self.op_btn_layout = QVBoxLayout()
         self.op_btn_widget.setLayout(self.op_btn_layout)
-        
+
         self.btn_text = QPushButton("script")
         self.btn_text.clicked.connect(self.onClickChooseTextFile)
         self.btn_text.setFont(font_btn)
@@ -188,7 +193,7 @@ class QuitApplication(QMainWindow):
         self.btn_audio = QPushButton("wave")
         self.btn_audio.clicked.connect(self.onClickAudioDir)
         self.btn_audio.setFont(font_btn)
-        
+
         self.op_btn_layout.addWidget(self.btn_text)
         self.op_btn_layout.addWidget(self.btn_audio)
 
@@ -209,38 +214,38 @@ class QuitApplication(QMainWindow):
         self.op_choose_btn_widget = QWidget()
         self.op_choose_btn_layout = QVBoxLayout()
         self.op_choose_btn_widget.setLayout(self.op_choose_btn_layout)
-        
+
         self.btn_prev = QPushButton("上一句")
         # TODO 实现该功能
-        # self.btn_prev.clicked.connect(self.onClickChooseTextFile)
+        self.btn_prev.clicked.connect(self.onClickPrev)
         self.btn_prev.setFont(font_btn)
 
         self.btn_next = QPushButton("下一句")
         # TODO 实现该功能
-        # self.btn_next.clicked.connect(self.onClickAudioDir)
+        self.btn_next.clicked.connect(self.onClickNext)
         self.btn_next.setFont(font_btn)
-        
+
         self.op_choose_btn_layout.addWidget(self.btn_prev)
         self.op_choose_btn_layout.addWidget(self.btn_next)
-        
+
         # TODO 选择索引的下拉框
         self.cb_choose_widget = QWidget()
         self.cb_layout = QGridLayout()
         self.cb_choose_widget.setLayout(self.cb_layout)
-        
+
         self.cb_choose = QComboBox()
-        
+
         self.cb_layout.addWidget(self.cb_choose)
 
         self.op_layout.addWidget(self.op_btn_widget)
         self.op_layout.addWidget(self.op_le_widget)
         self.op_layout.addWidget(self.op_choose_btn_widget)
         self.op_layout.addWidget(self.cb_choose_widget)
-        
+
         self.run_widget = QWidget()
         self.run_layout = QHBoxLayout()
         self.run_widget.setLayout(self.run_layout)
-        
+
         self.btn_run = QPushButton("接受")
         self.btn_run.setFont(font_le)
         self.btn_run.setMinimumSize(20, 20)
@@ -258,14 +263,14 @@ class QuitApplication(QMainWindow):
         self.run_layout.addWidget(self.btn_run)
         self.run_layout.addWidget(self.btn_clear)
         self.run_layout.addWidget(self.btn_export)
-        
+
 
         # self.down_layout.addWidget(self.down_left_widget, 0, 2, 6, 3)
         # self.down_layout.addWidget(self.down_right_widget, 0, 3, 6, 9)
         self.down_layout.addWidget(self.text_widget)
         self.down_layout.addWidget(self.op_widget)
         self.down_layout.addWidget(self.run_widget)
-        
+
         self.setCentralWidget(self.main_widget)
 
         self.db_path = "database/annotation.db"
@@ -345,9 +350,35 @@ class QuitApplication(QMainWindow):
                         "Label": ref_text
                         }
 
-    def lastOne(self):
-        ## 回退到上一条
-        pass
+    def showInCommentsLineEdit(self):
+        checked_comments = self.cbox_commets.getCheckItem()
+        self.le_commets.setPlainText("aaaa")
+        print(checked_comments)
+        if checked_comments:
+            self.le_commets.setPlainText("\n".join(checked_comments))
+        else:
+            self.le_commets.setPlainText("")
+
+    def onClickPrev(self):
+        self.signal.emit()
+        self.audio_index -= 1
+        self.showCurrentData(self.audio_index)
+
+    def onClickNext(self):
+        self.signal.emit()
+        self.audio_index += 1
+        self.showCurrentData(self.audio_index)
+
+    def showCurrentData(self, index):
+        self.audio_name = self.audio2text[index][0]
+        self.le_rec.setText(self.audio2text[index][1])
+        self.le_ref.setText(self.audio2text[index][2])
+        audio_path = self.audio2path[self.audio_name]
+        self.plot_(audio_path)
+        self.play_thread = PlayAndStopThread(audio_path)
+        self.signal.connect(self.play_thread.accept)
+        self.play_thread.start()
+
 
     def selectByIndex(self, index):
         ## 显示某一条的标注结果
@@ -380,17 +411,10 @@ class QuitApplication(QMainWindow):
         self.find_audios.start()
         return audio_dir
 
-
     def getWavFiles(self, audio2path):
         self.audio2path = audio2path
         if self.audio_name:
-            audio_path = self.audio2path[self.audio_name]
-            self.plot_(audio_path)
-            self.play_thread = PlayAndStopThread(audio_path)
-            self.signal.connect(self.play_thread.accept)
-            self.play_thread.start()
-
-
+            self.showCurrentData(self.audio_index)
 
     def onClickClear(self):
         self.signal.emit()
@@ -412,18 +436,11 @@ class QuitApplication(QMainWindow):
         value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'N', now_str, '', rec_text, ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
-        self.audio_name = self.audio2text[self.audio_index][0]
-        self.le_rec.setText(self.audio2text[self.audio_index][1])
-        self.le_ref.setText(self.audio2text[self.audio_index][2])
-
-        audio_path = self.audio2path[self.audio_name]
-        self.plot_(audio_path)
-        self.play_thread = PlayAndStopThread(audio_path)
-        self.signal.connect(self.play_thread.accept)
-        self.play_thread.start()
+        self.showCurrentData(self.audio_index)
         self.audio_index += 1
 
     def onClickStart(self):
+        print(self.audio_index)
         self.signal.emit()
         wav_dir = self.le_audio.text()
         if not os.path.exists(wav_dir):
@@ -448,15 +465,7 @@ class QuitApplication(QMainWindow):
         value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text, ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
-        self.audio_name = self.audio2text[self.audio_index][0]
-        self.le_rec.setText(self.audio2text[self.audio_index][1])
-        self.le_ref.setText(self.audio2text[self.audio_index][2])
-
-        audio_path = self.audio2path[self.audio_name]
-        self.plot_(audio_path)
-        self.play_thread = PlayAndStopThread(audio_path)
-        self.signal.connect(self.play_thread.accept)
-        self.play_thread.start()
+        self.showCurrentData(self.audio_index)
         self.audio_index += 1
 
 
