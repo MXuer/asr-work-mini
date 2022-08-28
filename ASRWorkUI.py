@@ -234,6 +234,8 @@ class QuitApplication(QMainWindow):
 
         self.cb_choose = QComboBox()
 
+        self.cb_choose.currentIndexChanged.connect(self.indexChange)
+
         self.cb_layout.addWidget(self.cb_choose)
 
         self.op_layout.addWidget(self.op_btn_widget)
@@ -351,8 +353,6 @@ class QuitApplication(QMainWindow):
 
     def showInCommentsLineEdit(self):
         checked_comments = self.cbox_commets.getCheckItem()
-        self.le_commets.setText("aaaa")
-        print(checked_comments)
         if checked_comments:
             self.le_commets.setText("\n".join(checked_comments))
         else:
@@ -378,10 +378,13 @@ class QuitApplication(QMainWindow):
         self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
 
+    def indexChange(self):
+        self.signal.emit()
+        self.audio_index = int(self.cb_choose.currentText())
+        print(self.audio_index)
+        if self.audio_index:
+            self.showCurrentData(self.audio_index)
 
-    def selectByIndex(self, index):
-        ## 显示某一条的标注结果
-        pass
 
     def exportDB(self):
         ## 点击导出按钮的时候导出这个结果
@@ -399,7 +402,6 @@ class QuitApplication(QMainWindow):
         self.le_ref.setText(self.audio2text[self.audio_index][2])
         self.audio_index += 1
 
-
     def onClickAudioDir(self):
         audio_dir = QFileDialog.getExistingDirectory(self, "选取文件夹")
         self.le_audio.setText(audio_dir)
@@ -413,7 +415,10 @@ class QuitApplication(QMainWindow):
     def getWavFiles(self, audio2path):
         self.audio2path = audio2path
         if self.audio_name:
+            print(len(self.audio2text))
             self.showCurrentData(self.audio_index)
+            for index in range(1, len(self.audio2text)+1):
+                self.cb_choose.addItem(str(index))
 
     def onClickClear(self):
         self.signal.emit()
