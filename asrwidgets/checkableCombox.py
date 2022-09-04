@@ -54,3 +54,8 @@ class CheckableComboBox(QComboBox):
                 if self.status == 1:
                     self.model().item(index).setCheckState(QtCore.Qt.Unchecked)
             self.status = 0
+
+    def clear_all(self):
+        all_item = self.model().item(0)
+        for index in range(1, self.count()):  # 判断是否是全选的状态，如果不是，全选按钮应该处于未选中的状态
+            self.model().item(index).setCheckState(QtCore.Qt.Unchecked)

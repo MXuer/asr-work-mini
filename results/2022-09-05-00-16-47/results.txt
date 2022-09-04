@@ -1,4 +1,0 @@
-1b_10057.wav	E:\asr-work-mini\data\1b_10036.wav	接受	2022-09-05-00-04-20	asr识别正确_代词冠词不影响理解	Schalte die automatische Klima Regelung in der hinteren Reihe ein	Schalte die automatische Klimaregelung in der hinteren Reihe ein
-1b_10036.wav	E:\asr-work-mini\data\1b_10036.wav	不接受	2022-09-05-00-04-30	音频质量问题-发音语速等问题,整句不对应	Schalte die automatische Klima Regelung in der hinteren Reihe ein	Schalte die automatische Klimaregelung in der hinteren Reihe ein
-1b_10038.wav	E:\asr-work-mini\data\1b_10040.wav	接受	2022-09-05-00-05-08	音频质量问题-发音语速等问题,整句不对应,asr识别正确-复合词问题	Schalte die automatische Klimaregelung in der hintere aus	Schalte die automatische Klimaregelung in der hinteren Reihe aus
-1b_10040.wav	E:\asr-work-mini\data\1b_10040.wav	不接受	2022-09-05-00-05-12	音频质量问题-发音语速等问题,整句不对应,asr识别正确-复合词问题,asr识别正确_大小写问题	Schalte die automatische Klimaregelung in der hintere aus	Schalte die automatische Klimaregelung in der hinteren Reihe aus

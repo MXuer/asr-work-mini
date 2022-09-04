@@ -363,6 +363,7 @@ class QuitApplication(QMainWindow):
 
     def showCurrentData(self, index: int) -> None:
         logger.info(f"Show the current chosen index : {index}.")
+        self.cbox_comments.clear_all()
         self.audio_name = self.audio2text[index][0]
         self.le_rec.setText(self.audio2text[index][1])
         self.le_ref.setText(self.audio2text[index][2])
