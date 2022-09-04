@@ -107,9 +107,13 @@ class QuitApplication(QMainWindow):
 
         # 添加文本操作的label
         self.lbl_ref = QLabel("Label")
+        self.lbl_ref.setFont(font_le)
         self.lbl_rec = QLabel("AsrCERENCE")
+        self.lbl_rec.setFont(font_le)
         self.lbl_cerence = QLabel("CERENCE")
+        self.lbl_cerence.setFont(font_le)
         self.lbl_comments = QLabel("COMMETS")
+        self.lbl_comments.setFont(font_le)
         self.lbl_text_layout.addWidget(self.lbl_ref)
         self.lbl_text_layout.addWidget(self.lbl_rec)
         self.lbl_text_layout.addWidget(self.lbl_cerence)
@@ -225,7 +229,7 @@ class QuitApplication(QMainWindow):
         self.btn_export.setMinimumSize(20, 20)
 
         self.btn_run.clicked.connect(self.onClickStart)
-        self.btn_export.clicked.connect(self.close)
+        self.btn_export.clicked.connect(self.export_results)
         self.btn_clear.clicked.connect(self.onClickClear)
 
         self.run_layout.addWidget(self.btn_run)
@@ -265,6 +269,21 @@ class QuitApplication(QMainWindow):
         '''
         self.cur.execute(information)
 
+    def export_results(self) -> None:
+        if not self.results:
+            QMessageBox.warning(self, 'ERROR', "没有可导出的结果", QMessageBox.Yes, QMessageBox.Yes)
+        now = datetime.now()
+        now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
+        result_dir = os.path.join("results", now_str)
+        os.makedirs(result_dir, exist_ok=True)
+        result_file = os.path.join(result_dir, "results.txt")
+        with open(result_file, 'w', encoding='utf-8') as f:
+            #TODO 改变result的存储结构，现在太麻烦了。
+            for wavname, annote_info in self.results.items():
+                logger.info(f"Write with {wavname}.")
+                f.write("\t".join(list(annote_info.values())) + "\n")
+        QMessageBox.information(self, 'DONE', "导出成功！", QMessageBox.Yes)
+
     def onClickChooseTextFile(self) -> str:
         text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", "", "Text Files(*.txt)")
         self.le_textfile.setText(text_file)
@@ -297,7 +316,7 @@ class QuitApplication(QMainWindow):
                         "audio_path": wavpath,
                         "is_accept": is_accept,
                         "time": do_time,
-                        "notation": notation,
+                        "comments": notation,
                         "AsrCERENCE": rec_text,
                         "Label": ref_text
                     }
@@ -307,7 +326,7 @@ class QuitApplication(QMainWindow):
                     "audio_path": wavpath,
                     "is_accept": is_accept,
                     "time": do_time,
-                    "notation": notation,
+                    "comments": notation,
                     "AsrCERENCE": rec_text,
                     "Label": ref_text
                 }
@@ -326,15 +345,21 @@ class QuitApplication(QMainWindow):
         logger.info(f"Prev index : {self.audio_index}.")
         self.signal.emit()
         self.audio_index -= 1
+        if self.audio_index < 0:
+            QMessageBox.warning(self, 'ERROR', "没有上一句了。", QMessageBox.Yes, QMessageBox.Yes)
+            return
         self.cb_choose.setCurrentIndex(self.audio_index)
-        self.showCurrentData(self.audio_index)
 
     def onClickNext(self) -> None:
         logger.info(f"Next index : {self.audio_index}.")
+
+        if self.audio_index + 1 == len(self.audio2text):
+            QMessageBox.warning(self, 'ERROR', "没有下一句了。", QMessageBox.Yes, QMessageBox.Yes)
+            return
+
         self.signal.emit()
         self.audio_index += 1
         self.cb_choose.setCurrentIndex(self.audio_index)
-        self.showCurrentData(self.audio_index)
 
     def showCurrentData(self, index: int) -> None:
         logger.info(f"Show the current chosen index : {index}.")
@@ -352,10 +377,7 @@ class QuitApplication(QMainWindow):
         self.signal.emit()
         self.audio_index = int(self.cb_choose.currentText()) - 1
         logger.info(f"Current Index is {self.audio_index}.")
-
-    def exportDB(self):
-        """点击导出按钮的时候导出这个结果"""
-        pass
+        self.showCurrentData(self.audio_index)
 
     def getText(self, audio2text: str) -> None:
         self.audio2text = audio2text
@@ -405,21 +427,39 @@ class QuitApplication(QMainWindow):
             return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
+        comments = self.le_comments.text()
+        if not comments:
+            QMessageBox.warning(self, 'ERROR', "Comments不可以为空", QMessageBox.Yes, QMessageBox.Yes)
+            return
+
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
         anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
         value = (self.audio2text[self.audio_index - 1][0],
                  self.audio2path[self.audio_name],
-                 'N',
+                 '不接受',
                  now_str,
-                 '',
+                 comments,
                  rec_text,
                  ref_text)
+
         self.cur.execute(anno_result, value)
         self.conn.commit()
         self.cb_choose.setCurrentIndex(self.audio_index)
-        self.showCurrentData(self.audio_index)
+        self.le_comments.clear()
         self.audio_index += 1
+
+    def update_results(self, value: tuple) -> None:
+        self.results[wavname] = {
+            "audio_name": value[0],
+            "audio_path": value[1],
+            "is_accept": value[2],
+            "time": value[3],
+            "comments": value[4],
+            "AsrCERENCE": value[5],
+            "Label": value[6]
+        }
+
 
     def onClickStart(self) -> None:
         logger.info(f"Accept for {self.audio_index}. Current audio is {self.audio_name}.")
@@ -435,6 +475,10 @@ class QuitApplication(QMainWindow):
         if self.audio_index == len(self.audio2text):
             QMessageBox.warning(self, 'ERROR', "没有下一句了。", QMessageBox.Yes, QMessageBox.Yes)
             return
+        comments = self.le_comments.text()
+        if not comments:
+            QMessageBox.warning(self, 'ERROR', "Comments不可以为空", QMessageBox.Yes, QMessageBox.Yes)
+            return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
         logger.info(f"Cerence Text: {rec_text}.")
@@ -442,12 +486,17 @@ class QuitApplication(QMainWindow):
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
         anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
-        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text,
+        value = (self.audio2text[self.audio_index - 1][0],
+                 self.audio2path[self.audio_name],
+                 '接受',
+                 now_str,
+                 comments,
+                 rec_text,
                  ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
         self.cb_choose.setCurrentIndex(self.audio_index)
-        self.showCurrentData(self.audio_index)
+        self.le_comments.clear()
         self.audio_index += 1
 
     def onClickPlay(self) -> None:
