@@ -34,5 +34,5 @@ For my son, do asr and nlu annotation works.
 - [ ] 代码重构
   - [ ] 把大块的组件单独模块化；
   - [ ] 与界面无关的处理程序单独处理；
-  - [ ] `QThread`相关的都挪出来；
-  - [ ] 添加日志功能；
+  - [x] `QThread`相关的都挪出来；
+  - [x] 添加日志功能；
