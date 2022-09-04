@@ -1,6 +1,8 @@
+Cython
 pyqt5
-playsound
+matplotlib
 pydub
-librosa==0.6.0
+librosa
 qdarkstyle
 scipy
+numba==0.8
