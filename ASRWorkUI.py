@@ -7,12 +7,12 @@ Created on Wed Mar 31 23:16:43 2021
 
 import os
 import sys
-import wave
 import librosa
-from pathlib import Path
 import time
 from collections import defaultdict
 from datetime import datetime
+
+import logging
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
                              QVBoxLayout, QLineEdit, QTextEdit, QTextEdit,
@@ -21,15 +21,18 @@ from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow
 
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QIcon, QFont
-import matplotlib.pyplot as plt
 
 import qdarkstyle
-import pyaudio
 
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-import matplotlib
 import sqlite3
-matplotlib.use('Qt5Agg')
+
+
+# 导入所有的自定义的QWidget
+from asrwidgets.showWaveForm import QShowWavform
+from asrwidgets.checkableCombox import CheckableComboBox
+from asrwork_threads import ReadTextFileThread, FindAudioThread, PlayAndStopThread
+
+
 
 class QuitApplication(QMainWindow):
     signal = pyqtSignal()
@@ -40,10 +43,10 @@ class QuitApplication(QMainWindow):
         self.resize(1000, 600)
         # self.setFixedSize(1200, 800)
 
-        ## 整体布局
+        # 整体布局
         self.globalVLayout = QVBoxLayout()
 
-        ## 字体
+        # 字体
         font_btn = QFont()
         font_btn.setFamily("Consolas")
         font_btn.setBold(True)
@@ -90,33 +93,12 @@ class QuitApplication(QMainWindow):
         self.main_layout.addWidget(self.down_widget, 1, 0, 4, 6)
 
         # 把语音的波形界面添加到up_widget中
-        self.figure = plt.figure()
-        plt.gca().xaxis.set_major_locator(plt.NullLocator())
-        plt.gca().yaxis.set_major_locator(plt.NullLocator())
-        plt.subplots_adjust(top=1, bottom=0, left=0, right=1, hspace=0, wspace=0)
-        ax = plt.axes()
-        ax.set_facecolor('black')
-        self.canvas = FigureCanvas(self.figure)
-        self.up_layout.addWidget(self.canvas)
-
-        # # down widget中，左边是tag界面，右边是其他的操作界面
-        # # 先添加一个左右的widget
-        # self.down_left_widget = QWidget()
-        # self.down_left_layout = QVBoxLayout()
-        # self.down_left_widget.setLayout(self.down_left_layout)
-        #
-        #  ## 把tag widget添加进去
-        # self.lbl_tag = QLabel("TAG")
-        # self.lbl_tag.setFont(font_le)
-        # self.down_left_layout.addWidget(self.lbl_tag)
-
-        # 添加一个右边的widget的界面
-        # self.down_right_widget = QWidget()
-        # self.down_right_layout = QGridLayout()
-        # self.down_right_widget.setLayout(self.down_right_layout)
+        self.show_wavform_widget = QShowWavform()
+        self.up_layout.addWidget(self.show_wavform_widget)
 
 
-        ## 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
+
+        # 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
         self.text_widget = QWidget()
         self.text_layout = QHBoxLayout()
         self.text_widget.setLayout(self.text_layout)
@@ -132,7 +114,7 @@ class QuitApplication(QMainWindow):
         self.text_layout.addWidget(self.lbl_text_widget)
         self.text_layout.addWidget(self.le_text_widget)
 
-        #添加文本操作的label
+        # 添加文本操作的label
         self.lbl_ref = QLabel("Label")
         self.lbl_rec = QLabel("AsrCERENCE")
         self.lbl_cerence = QLabel("CERENCE")
@@ -142,27 +124,27 @@ class QuitApplication(QMainWindow):
         self.lbl_text_layout.addWidget(self.lbl_cerence)
         self.lbl_text_layout.addWidget(self.lbl_comments)
 
-        # commets的布局
+        # comments的布局
         self.comments_widget = QWidget()
         self.comments_layout = QHBoxLayout()
         self.comments_widget.setLayout(self.comments_layout)
 
-        self.le_commets = QLineEdit()
-        self.le_commets.setFont(font_le)
-        self.cbox_commets = CheckableComboBox()
+        self.le_comments = QLineEdit()
+        self.le_comments.setFont(font_le)
+        self.cbox_comments = CheckableComboBox()
 
-        ## 读取comments文件
-        self.cbox_commets.addItem("全选")
+        # 读取comments文件
+        self.cbox_comments.addItem("全选")
         comment_file = os.path.join(os.getcwd(), "comments", "comments.txt")
         for line in open(comment_file, encoding='utf-8-sig'):
             comment = line.strip()
-            self.cbox_commets.addItem(comment)
-        self.cbox_commets.currentIndexChanged.connect(self.showInCommentsLineEdit)
+            self.cbox_comments.addItem(comment)
+        self.cbox_comments.currentIndexChanged.connect(self.showInCommentsLineEdit)
 
-        self.comments_layout.addWidget(self.le_commets)
-        self.comments_layout.addWidget(self.cbox_commets)
+        self.comments_layout.addWidget(self.le_comments)
+        self.comments_layout.addWidget(self.cbox_comments)
 
-        ## 添加文本操作的line edit
+        # 添加文本操作的line edit
         self.le_ref = QLineEdit()
         self.le_ref.setFont(font_le)
         self.le_rec = QLineEdit()
@@ -173,7 +155,6 @@ class QuitApplication(QMainWindow):
         self.le_text_layout.addWidget(self.le_rec)
         self.le_text_layout.addWidget(self.le_1)
         self.le_text_layout.addWidget(self.comments_widget)
-
 
         # 添加打开文件和上一句下一句的组件
         self.op_widget = QWidget()
@@ -266,8 +247,6 @@ class QuitApplication(QMainWindow):
         self.run_layout.addWidget(self.btn_export)
 
 
-        # self.down_layout.addWidget(self.down_left_widget, 0, 2, 6, 3)
-        # self.down_layout.addWidget(self.down_right_widget, 0, 3, 6, 9)
         self.down_layout.addWidget(self.text_widget)
         self.down_layout.addWidget(self.op_widget)
         self.down_layout.addWidget(self.run_widget)
@@ -300,13 +279,6 @@ class QuitApplication(QMainWindow):
         )
         '''
         self.cur.execute(information)
-
-    def plot_(self, audio_path):
-        plt.cla()
-        y, sr = librosa.load(audio_path)
-        plt.plot(y, color='navajowhite')
-        self.canvas.draw()
-
 
     def onClickChooseTextFile(self):
         text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", "", "Text Files(*.txt)")
@@ -352,11 +324,11 @@ class QuitApplication(QMainWindow):
                         }
 
     def showInCommentsLineEdit(self):
-        checked_comments = self.cbox_commets.getCheckItem()
+        checked_comments = self.cbox_comments.getCheckItem()
         if checked_comments:
-            self.le_commets.setText("\n".join(checked_comments))
+            self.le_comments.setText("\n".join(checked_comments))
         else:
-            self.le_commets.setText("")
+            self.le_comments.setText("")
 
     def onClickPrev(self):
         self.signal.emit()
@@ -373,7 +345,7 @@ class QuitApplication(QMainWindow):
         self.le_rec.setText(self.audio2text[index][1])
         self.le_ref.setText(self.audio2text[index][2])
         audio_path = self.audio2path[self.audio_name]
-        self.plot_(audio_path)
+        self.show_wavform_widget.add_wavform(audio_path)
         self.play_thread = PlayAndStopThread(audio_path)
         self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
@@ -381,7 +353,7 @@ class QuitApplication(QMainWindow):
     def indexChange(self):
         self.signal.emit()
         self.audio_index = int(self.cb_choose.currentText())
-        print(self.audio_index)
+        logging.info(f"Current Index is {self.audio_index}.")
         if self.audio_index:
             self.showCurrentData(self.audio_index)
 
@@ -415,7 +387,6 @@ class QuitApplication(QMainWindow):
     def getWavFiles(self, audio2path):
         self.audio2path = audio2path
         if self.audio_name:
-            print(len(self.audio2text))
             self.showCurrentData(self.audio_index)
             for index in range(1, len(self.audio2text)+1):
                 self.cb_choose.addItem(str(index))
@@ -472,7 +443,6 @@ class QuitApplication(QMainWindow):
         self.showCurrentData(self.audio_index)
         self.audio_index += 1
 
-
     def onClickPlay(self):
         wav_path = self.le_audio.text()
         if not os.path.exists(wav_path):
@@ -485,134 +455,11 @@ class QuitApplication(QMainWindow):
     def setDone(self):
         self.setEnableTrue()
 
-
-    def HaveLoadModel(self):
-        self.ModelLoaded = True
-        self.te_content.append("Loading Model SUCCESS!")
-
     def show_info(self, msgs):
         self.te_content.append(msgs)
 
     def setStaus(self, content):
         self.status.showMessage(content)
-
-
-class PlayAndStopThread(QThread):
-    def __init__(self, wav_path):
-        super(PlayAndStopThread, self).__init__()
-        self.wavp = wav_path
-        self.stop = False
-
-    def accept(self):
-        self.stop = True
-
-    def run(self):
-        CHUNK = 1024
-        wf = wave.open(self.wavp, 'rb')   #(sys.argv[1], 'rb')
-        p = pyaudio.PyAudio()   #创建一个播放器
-        # 打开数据流
-        stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
-                        channels=wf.getnchannels(),
-                        rate=wf.getframerate(),
-                        output=True)
-        # 读取数据
-        data = wf.readframes(CHUNK)
-
-        # 播放
-        while data != '':
-            if self.stop:
-                return
-            stream.write(data)
-            data = wf.readframes(CHUNK)
-
-        # 停止数据流
-        stream.stop_stream()
-        stream.close()
-
-        # 关闭 PyAudio
-        p.terminate()
-
-class ReadTextFileThread(QThread):
-    audio_info = pyqtSignal(list)
-    def __init__(self, text_file: str) -> None:
-        super(ReadTextFileThread, self).__init__()
-        self.text_file = text_file
-
-    def run(self):
-        contents = open(self.text_file, encoding="utf-8").readlines()
-        audio2text = []
-        for line in contents[1:]:
-            audio_name, rec_result, ref_result = line.strip().split("\t")
-            audio_list = [audio_name, rec_result, ref_result]
-            audio2text.append(audio_list)
-
-        self.audio_info.emit(audio2text)
-
-
-class FindAudioThread(QThread):
-    audio_info = pyqtSignal(dict)
-    def __init__(self, audio_dir):
-        super(FindAudioThread, self).__init__()
-        self.audio_dir = audio_dir
-
-    def run(self):
-        audio2path = {}
-        audio_files = Path(self.audio_dir).rglob("*.wav")
-        for audio_file in audio_files:
-            audio_file = str(audio_file)
-            audio_name = os.path.basename(audio_file)
-            audio2path[audio_name] = audio_file
-
-        self.audio_info.emit(audio2path)
-
-from PyQt5 import QtCore, QtGui
-
-class CheckableComboBox(QComboBox):
-    def __init__(self, parent=None):
-        super(CheckableComboBox, self).__init__(parent)
-        self.setModel(QtGui.QStandardItemModel(self))
-        self.view().pressed.connect(self.handleItemPressed)
-        self.checkedItems = []
-        self.view().pressed.connect(self.get_all)
-        self.view().pressed.connect(self.getCheckItem)
-        self.status = 0
-    def handleItemPressed(self, index):                            #这个函数是每次选择项目时判断状态时自动调用的，不用管（自动调用）
-        item = self.model().itemFromIndex(index)
-        if item.checkState() == QtCore.Qt.Checked:
-            item.setCheckState(QtCore.Qt.Unchecked)
-        else:
-            item.setCheckState(QtCore.Qt.Checked)
-    def getCheckItem(self):
-        # getCheckItem方法可以获得选择的项目列表，自动调用。
-        for index in range(1,self.count()):
-            item = self.model().item(index)
-            if item.checkState() == QtCore.Qt.Checked:
-                if item.text() not in self.checkedItems:
-                    self.checkedItems.append(item.text())
-            else:
-                if item.text() in self.checkedItems:
-                    self.checkedItems.remove(item.text())
-        print("self.checkedItems为：",self.checkedItems)
-        return self.checkedItems                    #实例化的时候直接调用这个self.checkedItems就能获取到选中的值，不需要调用这个方法，方法会在选择选项的时候自动被调用。
-    def get_all(self):                            #实现全选功能的函数（自动调用）
-        all_item = self.model().item(0)
-        for index in range(1,self.count()):       #判断是否是全选的状态，如果不是，全选按钮应该处于未选中的状态
-            if self.status ==1:
-                if self.model().item(index).checkState() == QtCore.Qt.Unchecked:
-                    all_item.setCheckState(QtCore.Qt.Unchecked)
-                    self.status = 0
-                    break
-        if all_item.checkState() == QtCore.Qt.Checked:
-            if self.status == 0 :
-                for index in range(self.count()):
-                    self.model().item(index).setCheckState(QtCore.Qt.Checked)
-                    self.status = 1
-        elif all_item.checkState() == QtCore.Qt.Unchecked:
-            for index in range(self.count()):
-                if  self.status == 1 :
-                    self.model().item(index).setCheckState(QtCore.Qt.Unchecked)
-            self.status = 0
-
 
 
 
