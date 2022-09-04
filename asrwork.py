@@ -520,9 +520,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     # setup stylesheet
-    # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
     # # or in new API
-    # app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
+    app.setStyleSheet(qdarkstyle.load_stylesheet(qt_api='pyqt5'))
 
     w = QuitApplication()
     w.show()
