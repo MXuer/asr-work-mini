@@ -34,7 +34,6 @@ class CheckableComboBox(QComboBox):
             else:
                 if item.text() in self.checkedItems:
                     self.checkedItems.remove(item.text())
-        print("self.checkedItems为：", self.checkedItems)
         return self.checkedItems  # 实例化的时候直接调用这个self.checkedItems就能获取到选中的值，不需要调用这个方法，方法会在选择选项的时候自动被调用。
 
     def get_all(self):  # 实现全选功能的函数（自动调用）

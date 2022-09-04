@@ -4,8 +4,8 @@ Created on Sun Sep  4 18:44:50 2022
 
 @author: muxia
 """
+
 import os
-import sys
 import wave
 import logging
 
@@ -22,7 +22,7 @@ class ReadTextFileThread(QThread):
         super(ReadTextFileThread, self).__init__()
         self.text_file = text_file
 
-    def run(self):
+    def run(self) -> None:
         contents = open(self.text_file, encoding="utf-8").readlines()
         audio2text = []
         logging.info(f"Number of text information is {len(contents) - 1}")
@@ -55,17 +55,18 @@ class FindAudioThread(QThread):
 
 
 class PlayAndStopThread(QThread):
+    CHUNK = 1024
+
     def __init__(self, wav_path: str) -> None:
         super(PlayAndStopThread, self).__init__()
         self.wavp = wav_path
         self.stop = False
 
-    def accept(self):
+    def accept(self) -> None:
         self.stop = True
 
-    def run(self):
+    def run(self) -> None:
         logging.info(f"Start to play wav file: {self.wavp}.")
-        CHUNK = 1024
         wf = wave.open(self.wavp, 'rb')
         p = pyaudio.PyAudio()  # 创建一个播放器
         # 打开数据流
@@ -74,14 +75,14 @@ class PlayAndStopThread(QThread):
                         rate=wf.getframerate(),
                         output=True)
         # 读取数据
-        data = wf.readframes(CHUNK)
+        data = wf.readframes(self.CHUNK)
 
         # 播放
         while data != '':
             if self.stop:
                 return
             stream.write(data)
-            data = wf.readframes(CHUNK)
+            data = wf.readframes(self.CHUNK)
 
         # 停止数据流
         stream.stop_stream()
@@ -89,3 +90,4 @@ class PlayAndStopThread(QThread):
 
         # 关闭 PyAudio
         p.terminate()
+        logging.info(f"End to play wav file: {self.wavp}.")

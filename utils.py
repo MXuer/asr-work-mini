@@ -20,3 +20,15 @@ def read_comments_file(text_file_path: str) -> list:
         for line in contents:
             comments.append(line.strip())
     return comments
+
+
+def create_db_file(db_file: str) -> None:
+    pass
+
+
+def load_db_file(db_file: str) -> None:
+    pass
+
+
+def export(db_file: str, des_file: str) -> None:
+    pass

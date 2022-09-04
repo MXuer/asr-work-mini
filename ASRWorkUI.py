@@ -7,35 +7,35 @@ Created on Wed Mar 31 23:16:43 2021
 
 import os
 import sys
-import librosa
-import time
-from collections import defaultdict
 from datetime import datetime
 
 import logging
 
 from PyQt5.QtWidgets import (QApplication, QPushButton, QHBoxLayout, QMainWindow, QWidget,
-                             QVBoxLayout, QLineEdit, QTextEdit, QTextEdit,
-                             QComboBox, QFileDialog, QMessageBox,
+                             QVBoxLayout, QLineEdit, QComboBox, QFileDialog, QMessageBox,
                              QGridLayout, QLabel)
 
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QIcon, QFont
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QFont
 
 import qdarkstyle
 
 import sqlite3
-
 
 # 导入所有的自定义的QWidget
 from asrwidgets.showWaveForm import QShowWavform
 from asrwidgets.checkableCombox import CheckableComboBox
 from asrwork_threads import ReadTextFileThread, FindAudioThread, PlayAndStopThread
 
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s  %(filename)s : %(levelname)s  %(message)s',  # 定义输出log的格式
+                    datefmt='%Y-%m-%d %A %H:%M:%S')
+logger = logging.getLogger()
 
 
 class QuitApplication(QMainWindow):
     signal = pyqtSignal()
+
     def __init__(self):
         super(QuitApplication, self).__init__()
         self.setWindowTitle("ASR_NLU_WORK")
@@ -61,13 +61,6 @@ class QuitApplication(QMainWindow):
         self.status = self.statusBar()
         self.status.setFont(font_le)
         self.status.showMessage("准备就绪...")
-
-        ## 大屏幕布局
-        self.contentHLayout = QHBoxLayout()
-        self.te_content = QTextEdit()
-        self.te_content.setFont(font_le)
-        self.te_content.setReadOnly(True)
-        self.contentHLayout.addWidget(self.te_content)
 
         self.audio2text = None
         self.audio2path = None
@@ -95,8 +88,6 @@ class QuitApplication(QMainWindow):
         # 把语音的波形界面添加到up_widget中
         self.show_wavform_widget = QShowWavform()
         self.up_layout.addWidget(self.show_wavform_widget)
-
-
 
         # 右边分两层，一个是显示文本，二个是显示选择音频和文本文件的路径
         self.text_widget = QWidget()
@@ -196,26 +187,21 @@ class QuitApplication(QMainWindow):
         self.op_choose_btn_widget.setLayout(self.op_choose_btn_layout)
 
         self.btn_prev = QPushButton("上一句")
-        # TODO 实现该功能
         self.btn_prev.clicked.connect(self.onClickPrev)
         self.btn_prev.setFont(font_btn)
 
         self.btn_next = QPushButton("下一句")
-        # TODO 实现该功能
         self.btn_next.clicked.connect(self.onClickNext)
         self.btn_next.setFont(font_btn)
 
         self.op_choose_btn_layout.addWidget(self.btn_prev)
         self.op_choose_btn_layout.addWidget(self.btn_next)
 
-        # TODO 选择索引的下拉框
         self.cb_choose_widget = QWidget()
         self.cb_layout = QGridLayout()
         self.cb_choose_widget.setLayout(self.cb_layout)
 
         self.cb_choose = QComboBox()
-
-        self.cb_choose.currentIndexChanged.connect(self.indexChange)
 
         self.cb_layout.addWidget(self.cb_choose)
 
@@ -246,7 +232,6 @@ class QuitApplication(QMainWindow):
         self.run_layout.addWidget(self.btn_clear)
         self.run_layout.addWidget(self.btn_export)
 
-
         self.down_layout.addWidget(self.text_widget)
         self.down_layout.addWidget(self.op_widget)
         self.down_layout.addWidget(self.run_widget)
@@ -263,7 +248,7 @@ class QuitApplication(QMainWindow):
         else:
             self.loadExistedData()
 
-    def createDB(self):
+    def createDB(self) -> None:
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         self.conn = sqlite3.connect(self.db_path)
         self.cur = self.conn.cursor()
@@ -280,10 +265,9 @@ class QuitApplication(QMainWindow):
         '''
         self.cur.execute(information)
 
-    def onClickChooseTextFile(self):
+    def onClickChooseTextFile(self) -> str:
         text_file, filetype = QFileDialog.getOpenFileName(self, "选择文件", "", "Text Files(*.txt)")
         self.le_textfile.setText(text_file)
-        self.te_content.append(f"Reading Text File from {text_file}...")
         self.read_thread = ReadTextFileThread(text_file)
 
         self.read_thread.audio_info.connect(self.getText)
@@ -291,29 +275,24 @@ class QuitApplication(QMainWindow):
 
         return text_file
 
-    def loadExistedData(self):
-        ## 加载已经存在的db文件
+    def loadExistedData(self) -> None:
+        """
+        加载已经存在的db文件
+        :return:
+        """
+        logger.info("Loading existed DB file.")
         self.conn = sqlite3.connect(self.db_path)
         self.cur = self.conn.cursor()
         cmd = """SELECT * FROM annotation"""
         self.cur.execute(cmd)
         history_data = self.cur.fetchall()
         for ele in history_data:
+            logger.info(f"Loading {ele}.")
             wavname, wavpath, is_accept, do_time, notation, rec_text, ref_text = ele
             if wavname in self.results.keys():
                 prev_time = self.results[wavname]["time"]
                 if do_time > prev_time:
                     self.results[wavname] = {
-                            "audio_name": wavname,
-                            "audio_path": wavpath,
-                            "is_accept": is_accept,
-                            "time": do_time,
-                            "notation": notation,
-                            "AsrCERENCE": rec_text,
-                            "Label": ref_text
-                            }
-            else:
-                self.results[wavname] = {
                         "audio_name": wavname,
                         "audio_path": wavpath,
                         "is_accept": is_accept,
@@ -321,26 +300,44 @@ class QuitApplication(QMainWindow):
                         "notation": notation,
                         "AsrCERENCE": rec_text,
                         "Label": ref_text
-                        }
+                    }
+            else:
+                self.results[wavname] = {
+                    "audio_name": wavname,
+                    "audio_path": wavpath,
+                    "is_accept": is_accept,
+                    "time": do_time,
+                    "notation": notation,
+                    "AsrCERENCE": rec_text,
+                    "Label": ref_text
+                }
+        logger.info(f"Number of history data is {len(self.results.keys())}")
 
-    def showInCommentsLineEdit(self):
+    def showInCommentsLineEdit(self) -> None:
+        logger.info("Show the checked comments in line edit.")
         checked_comments = self.cbox_comments.getCheckItem()
+        logger.info(f"Current Chosen comments is {checked_comments}")
         if checked_comments:
-            self.le_comments.setText("\n".join(checked_comments))
+            self.le_comments.setText(",".join(checked_comments))
         else:
             self.le_comments.setText("")
 
-    def onClickPrev(self):
+    def onClickPrev(self) -> None:
+        logger.info(f"Prev index : {self.audio_index}.")
         self.signal.emit()
         self.audio_index -= 1
+        self.cb_choose.setCurrentIndex(self.audio_index)
         self.showCurrentData(self.audio_index)
 
-    def onClickNext(self):
+    def onClickNext(self) -> None:
+        logger.info(f"Next index : {self.audio_index}.")
         self.signal.emit()
         self.audio_index += 1
+        self.cb_choose.setCurrentIndex(self.audio_index)
         self.showCurrentData(self.audio_index)
 
-    def showCurrentData(self, index):
+    def showCurrentData(self, index: int) -> None:
+        logger.info(f"Show the current chosen index : {index}.")
         self.audio_name = self.audio2text[index][0]
         self.le_rec.setText(self.audio2text[index][1])
         self.le_ref.setText(self.audio2text[index][2])
@@ -350,48 +347,50 @@ class QuitApplication(QMainWindow):
         self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
 
-    def indexChange(self):
+    def indexChange(self) -> None:
+        logger.info("Index Changed. Set Index Combox to corresponding index.")
         self.signal.emit()
-        self.audio_index = int(self.cb_choose.currentText())
-        logging.info(f"Current Index is {self.audio_index}.")
-        if self.audio_index:
-            self.showCurrentData(self.audio_index)
-
+        self.audio_index = int(self.cb_choose.currentText()) - 1
+        logger.info(f"Current Index is {self.audio_index}.")
 
     def exportDB(self):
-        ## 点击导出按钮的时候导出这个结果
+        """点击导出按钮的时候导出这个结果"""
         pass
 
-    def getText(self, audio2text):
+    def getText(self, audio2text: str) -> None:
         self.audio2text = audio2text
         for ele in self.audio2text:
             if ele[0] in self.results.keys():
+                print(f"{ele[0]} already been processed.")
                 self.audio_index += 1
         if self.audio_index == len(self.audio2text):
             self.audio_index -= 1
         self.audio_name = self.audio2text[self.audio_index][0]
         self.le_rec.setText(self.audio2text[self.audio_index][1])
         self.le_ref.setText(self.audio2text[self.audio_index][2])
-        self.audio_index += 1
 
-    def onClickAudioDir(self):
+    def onClickAudioDir(self) -> str:
         audio_dir = QFileDialog.getExistingDirectory(self, "选取文件夹")
         self.le_audio.setText(audio_dir)
 
-        self.te_content.append(f"Find all audio files from {audio_dir}...")
-        self.find_audios = FindAudioThread(audio_dir)
-        self.find_audios.audio_info.connect(self.getWavFiles)
-        self.find_audios.start()
+        if audio_dir:
+            self.find_audios = FindAudioThread(audio_dir)
+            self.find_audios.audio_info.connect(self.getWavFiles)
+            self.find_audios.start()
         return audio_dir
 
-    def getWavFiles(self, audio2path):
+    def getWavFiles(self, audio2path: str) -> None:
+        logger.info("Set the Item.")
         self.audio2path = audio2path
         if self.audio_name:
             self.showCurrentData(self.audio_index)
-            for index in range(1, len(self.audio2text)+1):
+            for index in range(1, len(self.audio2text) + 1):
                 self.cb_choose.addItem(str(index))
+        self.cb_choose.setCurrentIndex(self.audio_index)
+        self.cb_choose.currentIndexChanged.connect(self.indexChange)
 
-    def onClickClear(self):
+
+    def onClickClear(self) -> None:
         self.signal.emit()
         wav_dir = self.le_audio.text()
         if not os.path.exists(wav_dir):
@@ -402,20 +401,28 @@ class QuitApplication(QMainWindow):
             QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
         if self.audio_index == len(self.audio2text):
+            QMessageBox.warning(self, 'ERROR', "没有下一句了。", QMessageBox.Yes, QMessageBox.Yes)
             return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
         anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
-        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'N', now_str, '', rec_text, ref_text)
+        value = (self.audio2text[self.audio_index - 1][0],
+                 self.audio2path[self.audio_name],
+                 'N',
+                 now_str,
+                 '',
+                 rec_text,
+                 ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
+        self.cb_choose.setCurrentIndex(self.audio_index)
         self.showCurrentData(self.audio_index)
         self.audio_index += 1
 
-    def onClickStart(self):
-        print(self.audio_index)
+    def onClickStart(self) -> None:
+        logger.info(f"Accept for {self.audio_index}. Current audio is {self.audio_name}.")
         self.signal.emit()
         wav_dir = self.le_audio.text()
         if not os.path.exists(wav_dir):
@@ -425,25 +432,25 @@ class QuitApplication(QMainWindow):
         if not os.path.exists(textfile):
             QMessageBox.warning(self, 'ERROR', "文本不存在", QMessageBox.Yes, QMessageBox.Yes)
             return
-        if self.audio_name in self.results.keys():
-            self.audio_index += 1
-            self.show_info(f"{self.audio_name} already done...")
-            return
         if self.audio_index == len(self.audio2text):
-            self.show_info("finised!")
+            QMessageBox.warning(self, 'ERROR', "没有下一句了。", QMessageBox.Yes, QMessageBox.Yes)
             return
         rec_text = self.le_rec.text()
         ref_text = self.le_ref.text()
+        logger.info(f"Cerence Text: {rec_text}.")
+        logger.info(f"Labeled Text: {ref_text}.")
         now = datetime.now()
         now_str = now.strftime("%Y-%m-%d-%H-%M-%S")
         anno_result = """INSERT INTO annotation VALUES(?,?,?,?,?,?, ?)"""
-        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text, ref_text)
+        value = (self.audio2text[self.audio_index - 1][0], self.audio2path[self.audio_name], 'Y', now_str, '', rec_text,
+                 ref_text)
         self.cur.execute(anno_result, value)
         self.conn.commit()
+        self.cb_choose.setCurrentIndex(self.audio_index)
         self.showCurrentData(self.audio_index)
         self.audio_index += 1
 
-    def onClickPlay(self):
+    def onClickPlay(self) -> None:
         wav_path = self.le_audio.text()
         if not os.path.exists(wav_path):
             QMessageBox.warning(self, 'ERROR', "语音不存在", QMessageBox.Yes, QMessageBox.Yes)
@@ -452,22 +459,15 @@ class QuitApplication(QMainWindow):
         self.signal.connect(self.play_thread.accept)
         self.play_thread.start()
 
-    def setDone(self):
+    def setDone(self) -> None:
         self.setEnableTrue()
 
-    def show_info(self, msgs):
-        self.te_content.append(msgs)
-
-    def setStaus(self, content):
+    def setStaus(self, content: str) -> None:
         self.status.showMessage(content)
 
 
-
-
-
-if __name__=="__main__":
+if __name__ == "__main__":
     app = QApplication(sys.argv)
-
 
     # setup stylesheet
     # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
